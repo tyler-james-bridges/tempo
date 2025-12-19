@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Text } from 'react-native';
+import { View, StyleSheet, Text, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import {
   LCDDisplay,
@@ -7,6 +8,7 @@ import {
   BeatControl,
   PlayButton,
   LEDIndicator,
+  SoundSelector,
 } from '../components';
 import { useMetronome } from '../hooks/useMetronome';
 import { COLORS } from '../constants/metronome';
@@ -18,6 +20,7 @@ export function MetronomeScreen() {
     setTempo,
     setBeat1,
     setBeat2,
+    setClickSound,
     tapTempo,
   } = useMetronome();
 
@@ -56,6 +59,12 @@ export function MetronomeScreen() {
           beat2={state.beat2}
           onBeat1Change={setBeat1}
           onBeat2Change={setBeat2}
+        />
+
+        {/* Sound Selector */}
+        <SoundSelector
+          selectedSound={state.clickSound}
+          onSoundChange={setClickSound}
         />
 
         {/* Tempo Control */}

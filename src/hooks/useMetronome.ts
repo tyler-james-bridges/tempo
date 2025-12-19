@@ -8,6 +8,7 @@ import {
   DEFAULT_BEAT2,
   DEFAULT_CLICK_SOUND,
 } from '../constants/metronome';
+import { SOUND_URIS } from '../utils/soundGenerator';
 
 interface UseMetronomeReturn {
   state: MetronomeState;
@@ -20,18 +21,6 @@ interface UseMetronomeReturn {
   setClickSound: (sound: ClickSound) => void;
   tapTempo: () => void;
 }
-
-// Generate click sound programmatically using oscillator-style approach
-const generateClickBuffer = async (
-  frequency: number,
-  duration: number,
-  volume: number
-): Promise<Audio.Sound> => {
-  // For now, we'll use a simple approach - in production, you'd use actual audio files
-  // or generate WAV buffers. This is a placeholder that will be enhanced.
-  const sound = new Audio.Sound();
-  return sound;
-};
 
 export function useMetronome(): UseMetronomeReturn {
   const [state, setState] = useState<MetronomeState>({
@@ -46,77 +35,99 @@ export function useMetronome(): UseMetronomeReturn {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const nextTickTimeRef = useRef<number>(0);
   const tapTimesRef = useRef<number[]>([]);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const accentSoundRef = useRef<Audio.Sound | null>(null);
+  const isPlayingRef = useRef(false);
+  const stateRef = useRef(state);
+  const soundsRef = useRef<Record<ClickSound, Audio.Sound | null>>({
+    click: null,
+    beep: null,
+    wood: null,
+    voice: null,
+  });
+
+  // Keep stateRef in sync
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Initialize audio
   useEffect(() => {
     const initAudio = async () => {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: false,
-      });
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: false,
+        });
+
+        // Pre-load all sounds
+        const soundTypes: ClickSound[] = ['click', 'beep', 'wood', 'voice'];
+        for (const soundType of soundTypes) {
+          try {
+            const { sound } = await Audio.Sound.createAsync(
+              { uri: SOUND_URIS[soundType] },
+              { shouldPlay: false }
+            );
+            soundsRef.current[soundType] = sound;
+          } catch (e) {
+            console.log(`Failed to load ${soundType} sound`);
+          }
+        }
+      } catch (e) {
+        console.log('Failed to initialize audio');
+      }
     };
+
     initAudio();
 
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
-      if (accentSoundRef.current) {
-        accentSoundRef.current.unloadAsync();
-      }
+      // Cleanup sounds
+      Object.values(soundsRef.current).forEach((sound) => {
+        if (sound) {
+          sound.unloadAsync();
+        }
+      });
     };
   }, []);
 
   // Get beat accent type
-  const getBeatAccent = useCallback(
-    (beatNumber: number): BeatAccent => {
-      if (beatNumber === 1) return 'strong';
-      if (state.beat2 && beatNumber % state.beat2 === 1) return 'medium';
-      return 'weak';
-    },
-    [state.beat2]
-  );
+  const getBeatAccent = useCallback((beatNumber: number): BeatAccent => {
+    const currentState = stateRef.current;
+    if (beatNumber === 1) return 'strong';
+    if (currentState.beat2 && beatNumber % currentState.beat2 === 1) return 'medium';
+    return 'weak';
+  }, []);
 
   // Play click sound
   const playClick = useCallback(async (accent: BeatAccent) => {
     try {
-      // Create a new sound instance for each click to avoid timing issues
-      const { sound } = await Audio.Sound.createAsync(
-        // Using different frequencies for different accents
-        // In production, these would be actual audio files
-        require('../../assets/sounds/click.wav'),
-        {
-          shouldPlay: true,
-          volume: accent === 'strong' ? 1.0 : accent === 'medium' ? 0.8 : 0.6,
-        }
-      );
+      const soundType = stateRef.current.clickSound;
+      const sound = soundsRef.current[soundType];
 
-      // Unload after playing to free memory
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
+      if (sound) {
+        const volume = accent === 'strong' ? 1.0 : accent === 'medium' ? 0.8 : 0.6;
+        await sound.setVolumeAsync(volume);
+        await sound.setPositionAsync(0);
+        await sound.playAsync();
+      }
     } catch (error) {
-      // Sound file not found - will be added later
-      console.log('Click sound not loaded yet');
+      // Silent fail if sound doesn't play
     }
   }, []);
 
   // Precise tick function with drift compensation
   const tick = useCallback(() => {
+    if (!isPlayingRef.current) return;
+
     const now = Date.now();
     const drift = now - nextTickTimeRef.current;
-    const interval = 60000 / state.tempo;
+    const currentState = stateRef.current;
+    const interval = 60000 / currentState.tempo;
 
     setState((prev) => {
       const nextBeat = prev.currentBeat >= prev.beat1 ? 1 : prev.currentBeat + 1;
       const accent = getBeatAccent(nextBeat);
 
-      // Play sound asynchronously
+      // Play sound
       playClick(accent);
 
       return {
@@ -130,17 +141,19 @@ export function useMetronome(): UseMetronomeReturn {
     const nextDelay = Math.max(0, interval - drift);
 
     intervalRef.current = setTimeout(tick, nextDelay);
-  }, [state.tempo, getBeatAccent, playClick]);
+  }, [getBeatAccent, playClick]);
 
   const start = useCallback(() => {
-    if (state.isPlaying) return;
+    if (isPlayingRef.current) return;
 
+    isPlayingRef.current = true;
     setState((prev) => ({ ...prev, isPlaying: true, currentBeat: 0 }));
     nextTickTimeRef.current = Date.now();
     tick();
-  }, [state.isPlaying, tick]);
+  }, [tick]);
 
   const stop = useCallback(() => {
+    isPlayingRef.current = false;
     if (intervalRef.current) {
       clearTimeout(intervalRef.current);
       intervalRef.current = null;
@@ -149,12 +162,12 @@ export function useMetronome(): UseMetronomeReturn {
   }, []);
 
   const toggle = useCallback(() => {
-    if (state.isPlaying) {
+    if (isPlayingRef.current) {
       stop();
     } else {
       start();
     }
-  }, [state.isPlaying, start, stop]);
+  }, [start, stop]);
 
   const setTempo = useCallback((tempo: number) => {
     const clampedTempo = Math.max(
@@ -221,6 +234,7 @@ export function useMetronome(): UseMetronomeReturn {
   // Clean up on unmount
   useEffect(() => {
     return () => {
+      isPlayingRef.current = false;
       if (intervalRef.current) {
         clearTimeout(intervalRef.current);
       }
