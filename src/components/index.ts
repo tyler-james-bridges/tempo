@@ -4,3 +4,8 @@ export { BeatControl } from './BeatControl';
 export { PlayButton } from './PlayButton';
 export { LEDIndicator } from './LEDIndicator';
 export { SoundSelector } from './SoundSelector';
+export { NoteMixer } from './NoteMixer';
+export { DrumPatternSelector } from './DrumPatternSelector';
+export { ReferenceTone } from './ReferenceTone';
+export { PresetList } from './PresetList';
+export { TabBar } from './TabBar';
