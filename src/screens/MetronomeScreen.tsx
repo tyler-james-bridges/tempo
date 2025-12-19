@@ -51,8 +51,17 @@ export function MetronomeScreen() {
         isPlaying={state.isPlaying}
       />
 
-      {/* Controls Section */}
-      <View style={styles.controlsSection}>
+      {/* Controls Section - Scrollable */}
+      <ScrollView
+        style={styles.controlsSection}
+        contentContainerStyle={styles.controlsContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Play/Stop Button - Prominent position */}
+        <View style={styles.playButtonContainer}>
+          <PlayButton isPlaying={state.isPlaying} onPress={toggle} />
+        </View>
+
         {/* Beat Controls */}
         <BeatControl
           beat1={state.beat1}
@@ -73,12 +82,7 @@ export function MetronomeScreen() {
           onTempoChange={setTempo}
           onTapTempo={tapTempo}
         />
-
-        {/* Play/Stop Button */}
-        <View style={styles.playButtonContainer}>
-          <PlayButton isPlaying={state.isPlaying} onPress={toggle} />
-        </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -113,10 +117,13 @@ const styles = StyleSheet.create({
   },
   controlsSection: {
     flex: 1,
+  },
+  controlsContent: {
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   playButtonContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginVertical: 16,
   },
 });
