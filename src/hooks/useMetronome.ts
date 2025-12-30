@@ -16,15 +16,51 @@ export type AccentPattern = 0 | 1 | 2 | 3 | 4;
 
 const SAMPLE_RATE = 44100;
 
-// Generate a click sound as a WAV data URI
-function generateClickSound(freq: number, duration: number, vol: number): string {
+// Generate different sounds based on type
+function generateSound(type: SoundType, isAccent: boolean, vol: number): string {
+  const duration = type === 'beep' ? 0.08 : type === 'cowbell' ? 0.12 : 0.05;
   const numSamples = Math.floor(SAMPLE_RATE * duration);
   const buffer = new Float32Array(numSamples);
 
   for (let i = 0; i < numSamples; i++) {
     const t = i / SAMPLE_RATE;
-    const envelope = Math.exp(-t * 50);
-    buffer[i] = Math.sin(2 * Math.PI * freq * t) * envelope * vol;
+    let sample = 0;
+
+    switch (type) {
+      case 'click': {
+        // Sharp click: high frequency with fast decay
+        const freq = isAccent ? 1200 : 800;
+        const decay = Math.exp(-t * 60);
+        sample = Math.sin(2 * Math.PI * freq * t) * decay;
+        break;
+      }
+      case 'beep': {
+        // Pure tone beep: sine wave with softer envelope
+        const freq = isAccent ? 880 : 660;
+        const attack = Math.min(1, t * 100);
+        const decay = Math.exp(-t * 20);
+        sample = Math.sin(2 * Math.PI * freq * t) * attack * decay;
+        break;
+      }
+      case 'wood': {
+        // Woodblock: lower freq, band-pass character, quick decay
+        const freq = isAccent ? 400 : 320;
+        const decay = Math.exp(-t * 80);
+        const harmonic = Math.sin(2 * Math.PI * freq * 2.4 * t) * 0.3;
+        sample = (Math.sin(2 * Math.PI * freq * t) + harmonic) * decay;
+        break;
+      }
+      case 'cowbell': {
+        // Cowbell: two inharmonic frequencies
+        const f1 = isAccent ? 587 : 540;
+        const f2 = isAccent ? 845 : 800;
+        const decay = Math.exp(-t * 25);
+        sample = (Math.sin(2 * Math.PI * f1 * t) * 0.6 +
+                  Math.sin(2 * Math.PI * f2 * t) * 0.4) * decay;
+        break;
+      }
+    }
+    buffer[i] = sample * vol;
   }
 
   // Convert to WAV
@@ -107,18 +143,28 @@ export function useMetronome() {
     })).catch(() => {});
   }, [tempo, beats, soundType, subdivision, volume, accentPattern]);
 
-  // Initialize sounds
+  // Initialize sounds - regenerate when soundType changes
   useEffect(() => {
     const initSounds = async () => {
+      // Unload existing sounds
+      await Promise.all([
+        ...accentSoundsRef.current.map(s => s.unloadAsync().catch(() => {})),
+        ...beatSoundsRef.current.map(s => s.unloadAsync().catch(() => {})),
+        ...subSoundsRef.current.map(s => s.unloadAsync().catch(() => {})),
+      ]);
+      accentSoundsRef.current = [];
+      beatSoundsRef.current = [];
+      subSoundsRef.current = [];
+
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
       });
 
-      // Generate sound URIs
-      const accentUri = generateClickSound(1200, 0.05, 1.0);
-      const beatUri = generateClickSound(800, 0.04, 0.85);
-      const subUri = generateClickSound(600, 0.03, 0.5);
+      // Generate sound URIs based on current sound type
+      const accentUri = generateSound(soundType, true, 1.0);
+      const beatUri = generateSound(soundType, false, 0.85);
+      const subUri = generateSound(soundType, false, 0.5);
 
       // Create pool of 4 sounds for each type
       const poolSize = 4;
@@ -147,11 +193,11 @@ export function useMetronome() {
     initSounds();
 
     return () => {
-      accentSoundsRef.current.forEach(s => s.unloadAsync());
-      beatSoundsRef.current.forEach(s => s.unloadAsync());
-      subSoundsRef.current.forEach(s => s.unloadAsync());
+      accentSoundsRef.current.forEach(s => s.unloadAsync().catch(() => {}));
+      beatSoundsRef.current.forEach(s => s.unloadAsync().catch(() => {}));
+      subSoundsRef.current.forEach(s => s.unloadAsync().catch(() => {}));
     };
-  }, []);
+  }, [soundType]);
 
   // Update volume on all sounds
   useEffect(() => {
