@@ -1,11 +1,9 @@
-export { LCDDisplay } from './LCDDisplay';
-export { TempoControl } from './TempoControl';
-export { BeatControl } from './BeatControl';
-export { PlayButton } from './PlayButton';
-export { LEDIndicator } from './LEDIndicator';
-export { SoundSelector } from './SoundSelector';
-export { NoteMixer } from './NoteMixer';
-export { DrumPatternSelector } from './DrumPatternSelector';
-export { ReferenceTone } from './ReferenceTone';
-export { PresetList } from './PresetList';
-export { TabBar } from './TabBar';
+// Modern UI components
+export { BeatRing } from './modern/BeatRing';
+export { TempoDisplay } from './modern/TempoDisplay';
+export { GlassPill } from './modern/GlassPill';
+export { PlayPauseButton } from './modern/PlayPauseButton';
+export { SettingsPanel } from './modern/SettingsPanel';
+
+// Shared components
+export { NumberPickerModal } from './NumberPickerModal';

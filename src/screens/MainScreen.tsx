@@ -1,317 +1,455 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, ScrollView, Alert, TextInput, Modal, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  Text,
+  Pressable,
+  PanResponder,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import {
-  LCDDisplay,
-  TempoControl,
-  BeatControl,
-  PlayButton,
-  LEDIndicator,
-  SoundSelector,
-  DrumPatternSelector,
-  ReferenceTone,
-  PresetList,
-  TabBar,
-} from '../components';
-import { useMetronome } from '../hooks/useMetronome';
-import { usePresets } from '../hooks/usePresets';
-import { COLORS } from '../constants/metronome';
-import { AppMode, DrumPattern, ReferenceToneSettings, MetronomePreset } from '../types';
+import { useKeepAwake } from 'expo-keep-awake';
+
+import { useMetronome, SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
+import { BeatRing } from '../components/modern/BeatRing';
+import { TempoDisplay } from '../components/modern/TempoDisplay';
+import { GlassPill } from '../components/modern/GlassPill';
+import { PlayPauseButton } from '../components/modern/PlayPauseButton';
+import { SettingsPanel } from '../components/modern/SettingsPanel';
+import { NumberPickerModal } from '../components/NumberPickerModal';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export function MainScreen() {
-  const [activeTab, setActiveTab] = useState<AppMode>('metronome');
-  const [selectedDrumPattern, setSelectedDrumPattern] = useState<DrumPattern | null>(null);
-  const [toneSettings, setToneSettings] = useState<ReferenceToneSettings>({
-    note: 'A',
-    octave: 4,
-    a4Reference: 440,
-    isPlaying: false,
-  });
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [presetName, setPresetName] = useState('');
-
   const {
-    state,
+    tempo,
+    beats,
+    isPlaying,
+    currentBeat,
+    soundType,
+    subdivision,
+    volume,
+    accentPattern,
     toggle,
     setTempo,
-    setBeat1,
-    setBeat2,
-    setClickSound,
+    setBeats,
+    setSoundType,
+    setSubdivision,
+    setVolume,
+    setAccentPattern,
     tapTempo,
   } = useMetronome();
 
-  const {
-    metronomePresets,
-    saveMetronomePreset,
-    deleteMetronomePreset,
-  } = usePresets();
+  useKeepAwake();
 
-  const handlePresetSelect = (preset: MetronomePreset) => {
-    setTempo(preset.tempo);
-    setBeat1(preset.beat1);
-    setBeat2(preset.beat2);
-    setClickSound(preset.clickSound);
-  };
+  const [showSettings, setShowSettings] = useState(false);
+  const [showTempoPicker, setShowTempoPicker] = useState(false);
 
-  const handleSavePreset = async () => {
-    if (!presetName.trim()) {
-      Alert.alert('Error', 'Please enter a preset name');
-      return;
-    }
+  const lastTempoRef = useRef(tempo);
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderGrant: () => {
+        lastTempoRef.current = tempo;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const sensitivity = 0.5;
+        const delta = -gestureState.dy * sensitivity;
+        const newTempo = Math.round(lastTempoRef.current + delta);
+        setTempo(newTempo);
+      },
+    })
+  ).current;
 
-    await saveMetronomePreset({
-      name: presetName.trim(),
-      tempo: state.tempo,
-      beat1: state.beat1,
-      beat2: state.beat2,
-      clickSound: state.clickSound,
-    });
+  const handleTapTempo = useCallback(() => {
+    tapTempo();
+  }, [tapTempo]);
 
-    setPresetName('');
-    setShowSaveModal(false);
-  };
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'drumPattern':
-        return (
-          <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-            <DrumPatternSelector
-              selectedPattern={selectedDrumPattern}
-              onPatternSelect={setSelectedDrumPattern}
-            />
-          </ScrollView>
-        );
-
-      case 'referenceTone':
-        return (
-          <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-            <ReferenceTone
-              settings={toneSettings}
-              onChange={setToneSettings}
-            />
-          </ScrollView>
-        );
-
-      case 'presets':
-        return (
-          <View style={styles.tabContent}>
-            <PresetList
-              presets={metronomePresets}
-              onSelect={handlePresetSelect}
-              onDelete={deleteMetronomePreset}
-              currentTempo={state.tempo}
-            />
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={() => setShowSaveModal(true)}
-            >
-              <Text style={styles.saveButtonText}>+ Save Current as Preset</Text>
-            </TouchableOpacity>
-          </View>
-        );
-
-      case 'metronome':
-      default:
-        return (
-          <ScrollView
-            style={styles.tabContent}
-            contentContainerStyle={styles.metronomeContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.playButtonContainer}>
-              <PlayButton isPlaying={state.isPlaying} onPress={toggle} />
-            </View>
-
-            <BeatControl
-              beat1={state.beat1}
-              beat2={state.beat2}
-              onBeat1Change={setBeat1}
-              onBeat2Change={setBeat2}
-            />
-
-            <SoundSelector
-              selectedSound={state.clickSound}
-              onSoundChange={setClickSound}
-            />
-
-            <TempoControl
-              tempo={state.tempo}
-              onTempoChange={setTempo}
-              onTapTempo={tapTempo}
-            />
-          </ScrollView>
-        );
-    }
+  const shouldAccent = (beat: number) => {
+    if (accentPattern === 0) return beat === 1;
+    if (accentPattern === 1) return true;
+    return (beat - 1) % accentPattern === 0;
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.brand}>BOSS</Text>
-        <Text style={styles.model}>DB-90</Text>
-        <Text style={styles.subtitle}>Dr. Beat</Text>
-      </View>
+      {/* Colored gradient orbs for depth */}
+      <View style={styles.gradientOrb1} />
+      <View style={styles.gradientOrb2} />
+      <View style={styles.gradientOrb3} />
 
-      {/* LED Beat Indicators */}
-      <LEDIndicator
-        beat1={state.beat1}
-        currentBeat={state.currentBeat}
-        isPlaying={state.isPlaying}
-      />
+      <SafeAreaView style={styles.safeArea} {...panResponder.panHandlers}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.appTitle}>Tempo</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.settingsButton,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={() => setShowSettings(true)}
+          >
+            <View style={styles.settingsIcon}>
+              <View style={styles.settingsDot} />
+              <View style={styles.settingsDot} />
+              <View style={styles.settingsDot} />
+            </View>
+          </Pressable>
+        </View>
 
-      {/* LCD Display */}
-      <LCDDisplay
-        tempo={state.tempo}
-        beat1={state.beat1}
-        beat2={state.beat2}
-        currentBeat={state.currentBeat}
-        isPlaying={state.isPlaying}
-      />
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {/* Beat Ring with colored glow */}
+          <View style={styles.beatRingOuter}>
+            {/* Ambient glow */}
+            <View style={[
+              styles.ambientGlow,
+              isPlaying && styles.ambientGlowActive,
+            ]} />
 
-      {/* Tab Content */}
-      {renderContent()}
+            {/* Ring track */}
+            <View style={styles.ringTrack} />
 
-      {/* Tab Bar */}
-      <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+            <View style={styles.beatRingContainer}>
+              {Array.from({ length: beats }).map((_, i) => (
+                <BeatRing
+                  key={i}
+                  beatNumber={i + 1}
+                  totalBeats={beats}
+                  isActive={currentBeat === i + 1}
+                  isAccent={shouldAccent(i + 1)}
+                  isPlaying={isPlaying}
+                />
+              ))}
 
-      {/* Save Preset Modal */}
-      <Modal visible={showSaveModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Save Preset</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Preset name"
-              placeholderTextColor={COLORS.textSecondary}
-              value={presetName}
-              onChangeText={setPresetName}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => setShowSaveModal(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={handleSavePreset}
-              >
-                <Text style={styles.modalButtonTextPrimary}>Save</Text>
-              </TouchableOpacity>
+              <TempoDisplay
+                tempo={tempo}
+                isPlaying={isPlaying}
+                onPress={() => setShowTempoPicker(true)}
+              />
             </View>
           </View>
+
+          {/* Quick info pills */}
+          <View style={styles.infoPills}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.infoPill,
+                pressed && styles.infoPillPressed,
+              ]}
+              onPress={() => setShowSettings(true)}
+            >
+              <Text style={styles.infoPillText}>{beats}/4</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.infoPill,
+                styles.infoPillAccent,
+                pressed && styles.infoPillPressed,
+              ]}
+              onPress={() => setShowSettings(true)}
+            >
+              <Text style={[styles.infoPillText, styles.infoPillTextAccent]}>
+                {subdivision === 1 ? '♩' : subdivision === 2 ? '♪♪' : subdivision === 3 ? '♪³' : '♬'}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.infoPill,
+                pressed && styles.infoPillPressed,
+              ]}
+              onPress={() => setShowSettings(true)}
+            >
+              <Text style={styles.infoPillText}>
+                {soundType.charAt(0).toUpperCase() + soundType.slice(1)}
+              </Text>
+            </Pressable>
+          </View>
         </View>
-      </Modal>
-    </SafeAreaView>
+
+        {/* Bottom Controls */}
+        <View style={styles.bottomControls}>
+          {/* Tempo adjustment buttons */}
+          <View style={styles.tempoControls}>
+            {[-5, -1, +1, +5].map((delta) => (
+              <Pressable
+                key={delta}
+                style={({ pressed }) => [
+                  styles.tempoAdjustButton,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={() => setTempo(tempo + delta)}
+              >
+                <Text style={styles.tempoAdjustText}>
+                  {delta > 0 ? `+${delta}` : delta}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Main action buttons */}
+          <View style={styles.actionButtons}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.sideButton,
+                pressed && styles.buttonPressed,
+              ]}
+              onPress={handleTapTempo}
+            >
+              <Text style={styles.sideButtonText}>TAP</Text>
+            </Pressable>
+
+            <PlayPauseButton
+              isPlaying={isPlaying}
+              onPress={toggle}
+              size={88}
+            />
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.sideButton,
+                pressed && styles.buttonPressed,
+              ]}
+              onPress={() => setShowSettings(true)}
+            >
+              <Text style={styles.sideButtonText}>EDIT</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.swipeHint}>Swipe up/down to adjust tempo</Text>
+        </View>
+      </SafeAreaView>
+
+      <SettingsPanel
+        isVisible={showSettings}
+        onClose={() => setShowSettings(false)}
+        soundType={soundType}
+        setSoundType={setSoundType}
+        subdivision={subdivision}
+        setSubdivision={setSubdivision}
+        accentPattern={accentPattern}
+        setAccentPattern={setAccentPattern}
+        volume={volume}
+        setVolume={setVolume}
+        beats={beats}
+        setBeats={setBeats}
+      />
+
+      <NumberPickerModal
+        visible={showTempoPicker}
+        title="Set Tempo"
+        value={tempo}
+        min={30}
+        max={250}
+        onSelect={(val) => val !== null && setTempo(val)}
+        onClose={() => setShowTempoPicker(false)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#050508',
+  },
+  // Warm gradient orbs - musician-friendly amber/gold tones
+  gradientOrb1: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: '#1a1408', // warm brown
+  },
+  gradientOrb2: {
+    position: 'absolute',
+    top: '40%',
+    right: -150,
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    backgroundColor: '#1a0f08', // deep amber
+  },
+  gradientOrb3: {
+    position: 'absolute',
+    bottom: -50,
+    left: '20%',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#0f0d0a', // warm charcoal
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
-  brand: {
-    color: COLORS.accent,
-    fontSize: 24,
-    fontWeight: 'bold',
-    letterSpacing: 6,
+  appTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -1,
   },
-  model: {
-    color: COLORS.textPrimary,
-    fontSize: 28,
-    fontWeight: '300',
-    letterSpacing: 3,
+  settingsButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  subtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontStyle: 'italic',
+  buttonPressed: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    transform: [{ scale: 0.96 }],
   },
-  tabContent: {
+  settingsIcon: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  settingsDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  mainContent: {
     flex: 1,
-    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  metronomeContent: {
+  beatRingOuter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 300,
+    height: 300,
+  },
+  ambientGlow: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#FFB347', // warm gold
+    opacity: 0.04,
+  },
+  ambientGlowActive: {
+    opacity: 0.15,
+    shadowColor: '#FFB347',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 60,
+  },
+  ringTrack: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  beatRingContainer: {
+    width: 280,
+    height: 280,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  infoPills: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 48,
+  },
+  infoPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  infoPillAccent: {
+    backgroundColor: 'rgba(255,179,71,0.12)',
+    borderColor: 'rgba(255,179,71,0.3)',
+  },
+  infoPillPressed: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  infoPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+  },
+  infoPillTextAccent: {
+    color: '#FFB347', // warm gold
+  },
+  bottomControls: {
+    paddingHorizontal: 24,
     paddingBottom: 20,
   },
-  playButtonContainer: {
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  saveButton: {
-    backgroundColor: COLORS.accent,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: COLORS.bodyGray,
-    borderRadius: 12,
-    padding: 20,
-    width: '80%',
-  },
-  modalTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalInput: {
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-    padding: 12,
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  modalButtons: {
+  tempoControls: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 28,
   },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: COLORS.buttonGray,
+  tempoAdjustButton: {
+    width: 60,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  modalButtonPrimary: {
-    backgroundColor: COLORS.accent,
+  tempoAdjustText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.5)',
   },
-  modalButtonText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
   },
-  modalButtonTextPrimary: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+  sideButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  sideButtonText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 1.5,
+  },
+  swipeHint: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.2)',
+    textAlign: 'center',
+    marginTop: 24,
+    letterSpacing: 0.5,
   },
 });

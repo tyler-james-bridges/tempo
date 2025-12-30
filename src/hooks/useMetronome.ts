@@ -1,255 +1,333 @@
+/**
+ * Simple metronome using expo-av
+ * Basic implementation that works in Expo Go
+ */
+
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Audio } from 'expo-av';
-import { MetronomeState, ClickSound, BeatAccent } from '../types/metronome';
-import {
-  METRONOME_CONFIG,
-  DEFAULT_TEMPO,
-  DEFAULT_BEAT1,
-  DEFAULT_BEAT2,
-  DEFAULT_CLICK_SOUND,
-} from '../constants/metronome';
-import { SOUND_URIS } from '../utils/soundGenerator';
+import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface UseMetronomeReturn {
-  state: MetronomeState;
-  start: () => void;
-  stop: () => void;
-  toggle: () => void;
-  setTempo: (tempo: number) => void;
-  setBeat1: (beat: number) => void;
-  setBeat2: (beat: number | null) => void;
-  setClickSound: (sound: ClickSound) => void;
-  tapTempo: () => void;
+const STORAGE_KEY = 'metronome_settings_v4';
+
+export type SoundType = 'click' | 'beep' | 'wood' | 'cowbell';
+export type SubdivisionType = 1 | 2 | 3 | 4;
+export type AccentPattern = 0 | 1 | 2 | 3 | 4;
+
+const SAMPLE_RATE = 44100;
+
+// Generate a click sound as a WAV data URI
+function generateClickSound(freq: number, duration: number, vol: number): string {
+  const numSamples = Math.floor(SAMPLE_RATE * duration);
+  const buffer = new Float32Array(numSamples);
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / SAMPLE_RATE;
+    const envelope = Math.exp(-t * 50);
+    buffer[i] = Math.sin(2 * Math.PI * freq * t) * envelope * vol;
+  }
+
+  // Convert to WAV
+  const wavBuffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(wavBuffer);
+
+  // WAV header
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, SAMPLE_RATE, true);
+  view.setUint32(28, SAMPLE_RATE * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  for (let i = 0; i < numSamples; i++) {
+    view.setInt16(44 + i * 2, Math.floor(buffer[i] * 32767), true);
+  }
+
+  const bytes = new Uint8Array(wavBuffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+
+  return 'data:audio/wav;base64,' + btoa(binary);
 }
 
-export function useMetronome(): UseMetronomeReturn {
-  const [state, setState] = useState<MetronomeState>({
-    tempo: DEFAULT_TEMPO,
-    beat1: DEFAULT_BEAT1,
-    beat2: DEFAULT_BEAT2,
-    isPlaying: false,
-    currentBeat: 0,
-    clickSound: DEFAULT_CLICK_SOUND,
-  });
+export function useMetronome() {
+  const [tempo, setTempoState] = useState(120);
+  const [beats, setBeatsState] = useState(4);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentBeat, setCurrentBeat] = useState(0);
+  const [soundType, setSoundTypeState] = useState<SoundType>('click');
+  const [subdivision, setSubdivisionState] = useState<SubdivisionType>(1);
+  const [volume, setVolumeState] = useState(0.8);
+  const [accentPattern, setAccentPatternState] = useState<AccentPattern>(0);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const nextTickTimeRef = useRef<number>(0);
-  const tapTimesRef = useRef<number[]>([]);
-  const isPlayingRef = useRef(false);
-  const stateRef = useRef(state);
-  const soundsRef = useRef<Record<ClickSound, Audio.Sound | null>>({
-    click: null,
-    beep: null,
-    wood: null,
-    voice: null,
-  });
+  // Sound refs - pool of 4 sounds for each type
+  const accentSoundsRef = useRef<Audio.Sound[]>([]);
+  const beatSoundsRef = useRef<Audio.Sound[]>([]);
+  const subSoundsRef = useRef<Audio.Sound[]>([]);
+  const soundIndexRef = useRef(0);
 
-  // Keep stateRef in sync
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const currentBeatRef = useRef(1);
+  const currentSubRef = useRef(1);
+
+  // Load settings on mount
   useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+    AsyncStorage.getItem(STORAGE_KEY).then(s => {
+      if (s) {
+        const d = JSON.parse(s);
+        if (d.tempo) setTempoState(d.tempo);
+        if (d.beats) setBeatsState(d.beats);
+        if (d.soundType) setSoundTypeState(d.soundType);
+        if (d.subdivision) setSubdivisionState(d.subdivision);
+        if (d.volume !== undefined) setVolumeState(d.volume);
+        if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
+      }
+    }).catch(() => {});
+  }, []);
 
-  // Initialize audio
+  // Save settings
   useEffect(() => {
-    const initAudio = async () => {
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: false,
-        });
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+      tempo, beats, soundType, subdivision, volume, accentPattern
+    })).catch(() => {});
+  }, [tempo, beats, soundType, subdivision, volume, accentPattern]);
 
-        // Pre-load all sounds
-        const soundTypes: ClickSound[] = ['click', 'beep', 'wood', 'voice'];
-        for (const soundType of soundTypes) {
-          try {
-            const { sound } = await Audio.Sound.createAsync(
-              { uri: SOUND_URIS[soundType] },
-              { shouldPlay: false }
-            );
-            soundsRef.current[soundType] = sound;
-          } catch (e) {
-            console.log(`Failed to load ${soundType} sound`);
-          }
-        }
-      } catch (e) {
-        console.log('Failed to initialize audio');
+  // Initialize sounds
+  useEffect(() => {
+    const initSounds = async () => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+      });
+
+      // Generate sound URIs
+      const accentUri = generateClickSound(1200, 0.05, 1.0);
+      const beatUri = generateClickSound(800, 0.04, 0.85);
+      const subUri = generateClickSound(600, 0.03, 0.5);
+
+      // Create pool of 4 sounds for each type
+      const poolSize = 4;
+
+      for (let i = 0; i < poolSize; i++) {
+        const { sound: accent } = await Audio.Sound.createAsync(
+          { uri: accentUri },
+          { volume }
+        );
+        accentSoundsRef.current.push(accent);
+
+        const { sound: beat } = await Audio.Sound.createAsync(
+          { uri: beatUri },
+          { volume }
+        );
+        beatSoundsRef.current.push(beat);
+
+        const { sound: sub } = await Audio.Sound.createAsync(
+          { uri: subUri },
+          { volume: volume * 0.6 }
+        );
+        subSoundsRef.current.push(sub);
       }
     };
 
-    initAudio();
+    initSounds();
 
     return () => {
-      // Cleanup sounds
-      Object.values(soundsRef.current).forEach((sound) => {
-        if (sound) {
-          sound.unloadAsync();
-        }
-      });
+      accentSoundsRef.current.forEach(s => s.unloadAsync());
+      beatSoundsRef.current.forEach(s => s.unloadAsync());
+      subSoundsRef.current.forEach(s => s.unloadAsync());
     };
   }, []);
 
-  // Get beat accent type
-  const getBeatAccent = useCallback((beatNumber: number): BeatAccent => {
-    const currentState = stateRef.current;
-    if (beatNumber === 1) return 'strong';
-    if (currentState.beat2 && beatNumber % currentState.beat2 === 1) return 'medium';
-    return 'weak';
-  }, []);
+  // Update volume on all sounds
+  useEffect(() => {
+    accentSoundsRef.current.forEach(s => s.setVolumeAsync(volume).catch(() => {}));
+    beatSoundsRef.current.forEach(s => s.setVolumeAsync(volume).catch(() => {}));
+    subSoundsRef.current.forEach(s => s.setVolumeAsync(volume * 0.6).catch(() => {}));
+  }, [volume]);
 
-  // Play click sound
-  const playClick = useCallback(async (accent: BeatAccent) => {
-    try {
-      const soundType = stateRef.current.clickSound;
-      const sound = soundsRef.current[soundType];
+  const isAccented = useCallback((beat: number) => {
+    if (accentPattern === 0) return beat === 1;
+    if (accentPattern === 1) return true;
+    return (beat - 1) % accentPattern === 0;
+  }, [accentPattern]);
 
-      if (sound) {
-        const volume = accent === 'strong' ? 1.0 : accent === 'medium' ? 0.8 : 0.6;
-        await sound.setVolumeAsync(volume);
+  const playClick = useCallback(async (beat: number, sub: number) => {
+    const idx = soundIndexRef.current;
+    soundIndexRef.current = (soundIndexRef.current + 1) % 4;
+
+    let sound: Audio.Sound | undefined;
+
+    if (sub === 1) {
+      if (isAccented(beat)) {
+        sound = accentSoundsRef.current[idx];
+      } else {
+        sound = beatSoundsRef.current[idx];
+      }
+      setCurrentBeat(beat);
+      Haptics.impactAsync(
+        isAccented(beat) ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium
+      );
+    } else {
+      sound = subSoundsRef.current[idx];
+    }
+
+    if (sound) {
+      try {
         await sound.setPositionAsync(0);
         await sound.playAsync();
+      } catch {
+        // Ignore errors
       }
-    } catch (error) {
-      // Silent fail if sound doesn't play
     }
-  }, []);
+  }, [isAccented]);
 
-  // Precise tick function with drift compensation
   const tick = useCallback(() => {
-    if (!isPlayingRef.current) return;
+    playClick(currentBeatRef.current, currentSubRef.current);
 
-    const now = Date.now();
-    const drift = now - nextTickTimeRef.current;
-    const currentState = stateRef.current;
-    const interval = 60000 / currentState.tempo;
-
-    setState((prev) => {
-      const nextBeat = prev.currentBeat >= prev.beat1 ? 1 : prev.currentBeat + 1;
-      const accent = getBeatAccent(nextBeat);
-
-      // Play sound
-      playClick(accent);
-
-      return {
-        ...prev,
-        currentBeat: nextBeat,
-      };
-    });
-
-    // Schedule next tick with drift compensation
-    nextTickTimeRef.current += interval;
-    const nextDelay = Math.max(0, interval - drift);
-
-    intervalRef.current = setTimeout(tick, nextDelay);
-  }, [getBeatAccent, playClick]);
+    currentSubRef.current++;
+    if (currentSubRef.current > subdivision) {
+      currentSubRef.current = 1;
+      currentBeatRef.current++;
+      if (currentBeatRef.current > beats) {
+        currentBeatRef.current = 1;
+      }
+    }
+  }, [playClick, subdivision, beats]);
 
   const start = useCallback(() => {
-    if (isPlayingRef.current) return;
+    if (isPlaying) return;
 
-    isPlayingRef.current = true;
-    setState((prev) => ({ ...prev, isPlaying: true, currentBeat: 0 }));
-    nextTickTimeRef.current = Date.now();
+    currentBeatRef.current = 1;
+    currentSubRef.current = 1;
+    setIsPlaying(true);
+
+    // Play first tick immediately
     tick();
-  }, [tick]);
+
+    // Calculate interval
+    const msPerBeat = 60000 / tempo;
+    const msPerSub = msPerBeat / subdivision;
+
+    timerRef.current = setInterval(tick, msPerSub);
+  }, [isPlaying, tempo, subdivision, tick]);
 
   const stop = useCallback(() => {
-    isPlayingRef.current = false;
-    if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
-      intervalRef.current = null;
+    if (!isPlaying) return;
+
+    setIsPlaying(false);
+    setCurrentBeat(0);
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-    setState((prev) => ({ ...prev, isPlaying: false, currentBeat: 0 }));
-  }, []);
+  }, [isPlaying]);
+
+  // Restart if tempo/subdivision changes while playing
+  useEffect(() => {
+    if (isPlaying && timerRef.current) {
+      clearInterval(timerRef.current);
+      const msPerBeat = 60000 / tempo;
+      const msPerSub = msPerBeat / subdivision;
+      timerRef.current = setInterval(tick, msPerSub);
+    }
+  }, [tempo, subdivision, isPlaying, tick]);
 
   const toggle = useCallback(() => {
-    if (isPlayingRef.current) {
+    if (isPlaying) {
       stop();
     } else {
       start();
     }
-  }, [start, stop]);
+  }, [isPlaying, start, stop]);
 
-  const setTempo = useCallback((tempo: number) => {
-    const clampedTempo = Math.max(
-      METRONOME_CONFIG.minTempo,
-      Math.min(METRONOME_CONFIG.maxTempo, tempo)
-    );
-    setState((prev) => ({ ...prev, tempo: clampedTempo }));
+  const setTempo = useCallback((t: number) => {
+    setTempoState(Math.max(30, Math.min(250, Math.round(t))));
   }, []);
 
-  const setBeat1 = useCallback((beat: number) => {
-    const clampedBeat = Math.max(
-      METRONOME_CONFIG.minBeat,
-      Math.min(METRONOME_CONFIG.maxBeat, beat)
-    );
-    setState((prev) => ({ ...prev, beat1: clampedBeat }));
+  const setBeats = useCallback((b: number) => {
+    setBeatsState(Math.max(1, Math.min(12, b)));
   }, []);
 
-  const setBeat2 = useCallback((beat: number | null) => {
-    if (beat === null) {
-      setState((prev) => ({ ...prev, beat2: null }));
-      return;
-    }
-    const clampedBeat = Math.max(
-      METRONOME_CONFIG.minBeat,
-      Math.min(METRONOME_CONFIG.maxBeat, beat)
-    );
-    setState((prev) => ({ ...prev, beat2: clampedBeat }));
+  const setSoundType = useCallback((s: SoundType) => {
+    setSoundTypeState(s);
   }, []);
 
-  const setClickSound = useCallback((sound: ClickSound) => {
-    setState((prev) => ({ ...prev, clickSound: sound }));
+  const setSubdivision = useCallback((s: SubdivisionType) => {
+    setSubdivisionState(s);
   }, []);
 
-  // Tap tempo - calculates BPM from tap intervals
+  const setVolume = useCallback((v: number) => {
+    setVolumeState(Math.max(0, Math.min(1, v)));
+  }, []);
+
+  const setAccentPattern = useCallback((p: AccentPattern) => {
+    setAccentPatternState(p);
+  }, []);
+
+  // Tap tempo
+  const tapTimes = useRef<number[]>([]);
   const tapTempo = useCallback(() => {
     const now = Date.now();
-    const taps = tapTimesRef.current;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // Reset if last tap was more than 2 seconds ago
-    if (taps.length > 0 && now - taps[taps.length - 1] > 2000) {
-      tapTimesRef.current = [now];
-      return;
+    if (tapTimes.current.length && now - tapTimes.current[tapTimes.current.length - 1] > 2000) {
+      tapTimes.current = [];
     }
 
-    taps.push(now);
+    tapTimes.current.push(now);
+    if (tapTimes.current.length > 5) tapTimes.current.shift();
 
-    // Keep only last 4 taps
-    if (taps.length > 4) {
-      taps.shift();
-    }
-
-    // Calculate average interval from at least 2 taps
-    if (taps.length >= 2) {
-      const intervals: number[] = [];
-      for (let i = 1; i < taps.length; i++) {
-        intervals.push(taps[i] - taps[i - 1]);
+    if (tapTimes.current.length >= 2) {
+      let sum = 0;
+      for (let i = 1; i < tapTimes.current.length; i++) {
+        sum += tapTimes.current[i] - tapTimes.current[i - 1];
       }
-      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      const newTempo = Math.round(60000 / avgInterval);
-      setTempo(newTempo);
+      setTempo(Math.round(60000 / (sum / (tapTimes.current.length - 1))));
     }
   }, [setTempo]);
 
-  // Clean up on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
-      isPlayingRef.current = false;
-      if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
   return {
-    state,
+    tempo,
+    beats,
+    isPlaying,
+    currentBeat,
+    currentSubdivision: 0,
+    soundType,
+    subdivision,
+    volume,
+    accentPattern,
+    toggle,
     start,
     stop,
-    toggle,
     setTempo,
-    setBeat1,
-    setBeat2,
-    setClickSound,
+    setBeats,
+    setSoundType,
+    setSubdivision,
+    setVolume,
+    setAccentPattern,
     tapTempo,
   };
 }
