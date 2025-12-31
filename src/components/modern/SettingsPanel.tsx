@@ -19,6 +19,8 @@ interface SettingsPanelProps {
   setBeats: (beats: number) => void;
   countInEnabled: boolean;
   setCountInEnabled: (enabled: boolean) => void;
+  muteAudio: boolean;
+  setMuteAudio: (muted: boolean) => void;
 }
 
 const SOUND_OPTIONS: { type: SoundType; label: string; icon: string }[] = [
@@ -58,6 +60,8 @@ export function SettingsPanel({
   setBeats,
   countInEnabled,
   setCountInEnabled,
+  muteAudio,
+  setMuteAudio,
 }: SettingsPanelProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -178,6 +182,25 @@ export function SettingsPanel({
                 isActive={countInEnabled}
                 onPress={() => setCountInEnabled(true)}
                 accentColor="#10B981"
+              />
+            </View>
+          </View>
+
+          {/* Visual Only Mode */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Audio</Text>
+            <View style={styles.optionRow}>
+              <GlassPill
+                label="Sound On"
+                isActive={!muteAudio}
+                onPress={() => setMuteAudio(false)}
+                accentColor="#3B82F6"
+              />
+              <GlassPill
+                label="Visual Only"
+                isActive={muteAudio}
+                onPress={() => setMuteAudio(true)}
+                accentColor="#8B5CF6"
               />
             </View>
           </View>

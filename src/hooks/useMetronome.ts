@@ -112,6 +112,7 @@ export function useMetronome() {
   const [accentPattern, setAccentPatternState] = useState<AccentPattern>(0);
   const [countInEnabled, setCountInEnabledState] = useState(false);
   const [isCountingIn, setIsCountingIn] = useState(false);
+  const [muteAudio, setMuteAudioState] = useState(false);
 
   // Sound refs - pool of 4 sounds for each type
   const accentSoundsRef = useRef<Audio.Sound[]>([]);
@@ -123,6 +124,8 @@ export function useMetronome() {
   const currentBeatRef = useRef(1);
   const currentSubRef = useRef(1);
   const countInBeatRef = useRef(0);
+  const muteAudioRef = useRef(muteAudio);
+  muteAudioRef.current = muteAudio;
 
   // Load settings on mount
   useEffect(() => {
@@ -136,6 +139,7 @@ export function useMetronome() {
         if (d.volume !== undefined) setVolumeState(d.volume);
         if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
         if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
+        if (d.muteAudio !== undefined) setMuteAudioState(d.muteAudio);
       }
     }).catch(() => {});
   }, []);
@@ -143,9 +147,9 @@ export function useMetronome() {
   // Save settings
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled
+      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio
     })).catch(() => {});
-  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled]);
+  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio]);
 
   // Initialize sounds - regenerate when soundType changes
   useEffect(() => {
@@ -216,7 +220,7 @@ export function useMetronome() {
     return (beat - 1) % accentPattern === 0;
   }, [accentPattern]);
 
-  const playClick = useCallback(async (beat: number, sub: number) => {
+  const playClick = useCallback(async (beat: number, sub: number, muted: boolean) => {
     const idx = soundIndexRef.current;
     soundIndexRef.current = (soundIndexRef.current + 1) % 4;
 
@@ -236,7 +240,8 @@ export function useMetronome() {
       sound = subSoundsRef.current[idx];
     }
 
-    if (sound) {
+    // Skip audio if muted (visual + haptics still work)
+    if (sound && !muted) {
       try {
         await sound.setPositionAsync(0);
         await sound.playAsync();
@@ -247,7 +252,7 @@ export function useMetronome() {
   }, [isAccented]);
 
   const tick = useCallback(() => {
-    playClick(currentBeatRef.current, currentSubRef.current);
+    playClick(currentBeatRef.current, currentSubRef.current, muteAudioRef.current);
 
     currentSubRef.current++;
     if (currentSubRef.current > subdivision) {
@@ -271,7 +276,8 @@ export function useMetronome() {
     setCurrentBeat(countInBeatRef.current - beats - 1);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    if (sound) {
+    // Skip audio if muted
+    if (sound && !muteAudioRef.current) {
       sound.setPositionAsync(0).then(() => sound.playAsync()).catch(() => {});
     }
 
@@ -394,6 +400,10 @@ export function useMetronome() {
     setCountInEnabledState(enabled);
   }, []);
 
+  const setMuteAudio = useCallback((muted: boolean) => {
+    setMuteAudioState(muted);
+  }, []);
+
   // Tap tempo
   const tapTimes = useRef<number[]>([]);
   const tapTempo = useCallback(() => {
@@ -435,6 +445,7 @@ export function useMetronome() {
     accentPattern,
     countInEnabled,
     isCountingIn,
+    muteAudio,
     toggle,
     start,
     stop,
@@ -445,6 +456,7 @@ export function useMetronome() {
     setVolume,
     setAccentPattern,
     setCountInEnabled,
+    setMuteAudio,
     tapTempo,
   };
 }
