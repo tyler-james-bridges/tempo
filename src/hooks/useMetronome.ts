@@ -110,6 +110,8 @@ export function useMetronome() {
   const [subdivision, setSubdivisionState] = useState<SubdivisionType>(1);
   const [volume, setVolumeState] = useState(0.8);
   const [accentPattern, setAccentPatternState] = useState<AccentPattern>(0);
+  const [countInEnabled, setCountInEnabledState] = useState(false);
+  const [isCountingIn, setIsCountingIn] = useState(false);
 
   // Sound refs - pool of 4 sounds for each type
   const accentSoundsRef = useRef<Audio.Sound[]>([]);
@@ -120,6 +122,7 @@ export function useMetronome() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentBeatRef = useRef(1);
   const currentSubRef = useRef(1);
+  const countInBeatRef = useRef(0);
 
   // Load settings on mount
   useEffect(() => {
@@ -132,6 +135,7 @@ export function useMetronome() {
         if (d.subdivision) setSubdivisionState(d.subdivision);
         if (d.volume !== undefined) setVolumeState(d.volume);
         if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
+        if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
       }
     }).catch(() => {});
   }, []);
@@ -139,9 +143,9 @@ export function useMetronome() {
   // Save settings
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tempo, beats, soundType, subdivision, volume, accentPattern
+      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled
     })).catch(() => {});
-  }, [tempo, beats, soundType, subdivision, volume, accentPattern]);
+  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled]);
 
   // Initialize sounds - regenerate when soundType changes
   useEffect(() => {
@@ -255,27 +259,87 @@ export function useMetronome() {
     }
   }, [playClick, subdivision, beats]);
 
+  const countInTick = useCallback(() => {
+    countInBeatRef.current++;
+
+    // Play accent sound for count-in and show negative beat numbers
+    const idx = soundIndexRef.current;
+    soundIndexRef.current = (soundIndexRef.current + 1) % 4;
+    const sound = accentSoundsRef.current[idx];
+
+    // Display as negative countdown: -4, -3, -2, -1
+    setCurrentBeat(countInBeatRef.current - beats - 1);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+    if (sound) {
+      sound.setPositionAsync(0).then(() => sound.playAsync()).catch(() => {});
+    }
+
+    // Check if count-in is complete
+    if (countInBeatRef.current >= beats) {
+      // Stop count-in timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      // Transition to regular playback
+      setIsCountingIn(false);
+      currentBeatRef.current = 1;
+      currentSubRef.current = 1;
+
+      // Start regular tick after the beat interval
+      const msPerBeat = 60000 / tempo;
+      const msPerSub = msPerBeat / subdivision;
+
+      setTimeout(() => {
+        if (timerRef.current === null) return; // Was stopped during timeout
+        tick();
+        timerRef.current = setInterval(tick, msPerSub);
+      }, msPerSub);
+
+      // Set a marker so the timeout knows we're still going
+      timerRef.current = setTimeout(() => {}, 0) as unknown as ReturnType<typeof setInterval>;
+    }
+  }, [beats, tempo, subdivision, tick]);
+
   const start = useCallback(() => {
-    if (isPlaying) return;
+    if (isPlaying || isCountingIn) return;
 
-    currentBeatRef.current = 1;
-    currentSubRef.current = 1;
-    setIsPlaying(true);
+    if (countInEnabled) {
+      // Start count-in
+      countInBeatRef.current = 0;
+      setIsCountingIn(true);
+      setIsPlaying(true);
 
-    // Play first tick immediately
-    tick();
+      // Play first count-in beat immediately
+      countInTick();
 
-    // Calculate interval
-    const msPerBeat = 60000 / tempo;
-    const msPerSub = msPerBeat / subdivision;
+      // Calculate interval (no subdivisions during count-in)
+      const msPerBeat = 60000 / tempo;
+      timerRef.current = setInterval(countInTick, msPerBeat);
+    } else {
+      // Normal start without count-in
+      currentBeatRef.current = 1;
+      currentSubRef.current = 1;
+      setIsPlaying(true);
 
-    timerRef.current = setInterval(tick, msPerSub);
-  }, [isPlaying, tempo, subdivision, tick]);
+      // Play first tick immediately
+      tick();
+
+      // Calculate interval
+      const msPerBeat = 60000 / tempo;
+      const msPerSub = msPerBeat / subdivision;
+
+      timerRef.current = setInterval(tick, msPerSub);
+    }
+  }, [isPlaying, isCountingIn, countInEnabled, tempo, subdivision, tick, countInTick]);
 
   const stop = useCallback(() => {
     if (!isPlaying) return;
 
     setIsPlaying(false);
+    setIsCountingIn(false);
     setCurrentBeat(0);
 
     if (timerRef.current) {
@@ -326,6 +390,10 @@ export function useMetronome() {
     setAccentPatternState(p);
   }, []);
 
+  const setCountInEnabled = useCallback((enabled: boolean) => {
+    setCountInEnabledState(enabled);
+  }, []);
+
   // Tap tempo
   const tapTimes = useRef<number[]>([]);
   const tapTempo = useCallback(() => {
@@ -365,6 +433,8 @@ export function useMetronome() {
     subdivision,
     volume,
     accentPattern,
+    countInEnabled,
+    isCountingIn,
     toggle,
     start,
     stop,
@@ -374,6 +444,7 @@ export function useMetronome() {
     setSubdivision,
     setVolume,
     setAccentPattern,
+    setCountInEnabled,
     tapTempo,
   };
 }

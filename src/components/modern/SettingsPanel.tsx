@@ -17,6 +17,8 @@ interface SettingsPanelProps {
   setVolume: (vol: number) => void;
   beats: number;
   setBeats: (beats: number) => void;
+  countInEnabled: boolean;
+  setCountInEnabled: (enabled: boolean) => void;
 }
 
 const SOUND_OPTIONS: { type: SoundType; label: string; icon: string }[] = [
@@ -54,6 +56,8 @@ export function SettingsPanel({
   setVolume,
   beats,
   setBeats,
+  countInEnabled,
+  setCountInEnabled,
 }: SettingsPanelProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -156,6 +160,25 @@ export function SettingsPanel({
                   size="small"
                 />
               ))}
+            </View>
+          </View>
+
+          {/* Count-in */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Count-in</Text>
+            <View style={styles.optionRow}>
+              <GlassPill
+                label="Off"
+                isActive={!countInEnabled}
+                onPress={() => setCountInEnabled(false)}
+                accentColor="#9CA3AF"
+              />
+              <GlassPill
+                label="1 Bar"
+                isActive={countInEnabled}
+                onPress={() => setCountInEnabled(true)}
+                accentColor="#10B981"
+              />
             </View>
           </View>
 
