@@ -31,6 +31,8 @@ export function MainScreen() {
     subdivision,
     volume,
     accentPattern,
+    countInEnabled,
+    isCountingIn,
     toggle,
     setTempo,
     setBeats,
@@ -38,6 +40,7 @@ export function MainScreen() {
     setSubdivision,
     setVolume,
     setAccentPattern,
+    setCountInEnabled,
     tapTempo,
   } = useMetronome();
 
@@ -128,11 +131,18 @@ export function MainScreen() {
                 />
               ))}
 
-              <TempoDisplay
-                tempo={tempo}
-                isPlaying={isPlaying}
-                onPress={() => setShowTempoPicker(true)}
-              />
+              {isCountingIn ? (
+                <View style={styles.countInContainer}>
+                  <Text style={styles.countInNumber}>{Math.abs(currentBeat)}</Text>
+                  <Text style={styles.countInLabel}>COUNT IN</Text>
+                </View>
+              ) : (
+                <TempoDisplay
+                  tempo={tempo}
+                  isPlaying={isPlaying}
+                  onPress={() => setShowTempoPicker(true)}
+                />
+              )}
             </View>
           </View>
 
@@ -239,6 +249,8 @@ export function MainScreen() {
         setVolume={setVolume}
         beats={beats}
         setBeats={setBeats}
+        countInEnabled={countInEnabled}
+        setCountInEnabled={setCountInEnabled}
       />
 
       <NumberPickerModal
@@ -451,5 +463,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     letterSpacing: 0.5,
+  },
+  countInContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  countInNumber: {
+    fontSize: 96,
+    fontWeight: '300',
+    color: '#10B981',
+    letterSpacing: -4,
+  },
+  countInLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10B981',
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    marginTop: 4,
   },
 });
