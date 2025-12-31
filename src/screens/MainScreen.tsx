@@ -33,6 +33,7 @@ export function MainScreen() {
     accentPattern,
     countInEnabled,
     isCountingIn,
+    muteAudio,
     toggle,
     setTempo,
     setBeats,
@@ -41,6 +42,7 @@ export function MainScreen() {
     setVolume,
     setAccentPattern,
     setCountInEnabled,
+    setMuteAudio,
     tapTempo,
   } = useMetronome();
 
@@ -251,6 +253,8 @@ export function MainScreen() {
         setBeats={setBeats}
         countInEnabled={countInEnabled}
         setCountInEnabled={setCountInEnabled}
+        muteAudio={muteAudio}
+        setMuteAudio={setMuteAudio}
       />
 
       <NumberPickerModal
