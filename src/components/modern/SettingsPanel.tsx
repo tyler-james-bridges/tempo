@@ -21,6 +21,14 @@ interface SettingsPanelProps {
   setCountInEnabled: (enabled: boolean) => void;
   muteAudio: boolean;
   setMuteAudio: (muted: boolean) => void;
+  // Bluetooth latency compensation
+  audioLatency: number;
+  setAudioLatency: (latency: number) => void;
+  isCalibrating: boolean;
+  startCalibration: () => void;
+  stopCalibration: (applyResult?: boolean) => void;
+  calibrationTap: () => void;
+  getCalibrationResult: () => number | null;
 }
 
 const SOUND_OPTIONS: { type: SoundType; label: string; icon: string }[] = [
@@ -62,6 +70,13 @@ export function SettingsPanel({
   setCountInEnabled,
   muteAudio,
   setMuteAudio,
+  audioLatency,
+  setAudioLatency,
+  isCalibrating,
+  startCalibration,
+  stopCalibration,
+  calibrationTap,
+  getCalibrationResult,
 }: SettingsPanelProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -228,6 +243,110 @@ export function SettingsPanel({
             </View>
           </View>
 
+          {/* Bluetooth Latency Compensation */}
+          <View style={styles.section}>
+            <View style={styles.volumeHeader}>
+              <Text style={styles.sectionTitle}>Bluetooth Latency</Text>
+              <Text style={styles.latencyValue}>{audioLatency}ms</Text>
+            </View>
+            <Text style={styles.latencyHint}>
+              Compensate for Bluetooth speaker delay. Use calibration for best accuracy.
+            </Text>
+
+            {isCalibrating ? (
+              <View style={styles.calibrationContainer}>
+                <Text style={styles.calibrationTitle}>Tap when you HEAR the beat</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.calibrationTapButton,
+                    pressed && styles.calibrationTapButtonPressed,
+                  ]}
+                  onPress={calibrationTap}
+                >
+                  <Text style={styles.calibrationTapText}>TAP</Text>
+                </Pressable>
+                <Text style={styles.calibrationProgress}>
+                  {getCalibrationResult() !== null
+                    ? `Measured: ${getCalibrationResult()}ms`
+                    : 'Tap at least 4 times...'}
+                </Text>
+                <View style={styles.calibrationButtons}>
+                  <Pressable
+                    style={styles.calibrationCancelButton}
+                    onPress={() => stopCalibration(false)}
+                  >
+                    <Text style={styles.calibrationCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.calibrationApplyButton,
+                      getCalibrationResult() === null && styles.calibrationButtonDisabled,
+                    ]}
+                    onPress={() => stopCalibration(true)}
+                    disabled={getCalibrationResult() === null}
+                  >
+                    <Text style={styles.calibrationApplyText}>Apply</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <>
+                <View style={styles.volumeSliderContainer}>
+                  <Slider
+                    style={styles.volumeSlider}
+                    minimumValue={0}
+                    maximumValue={500}
+                    step={10}
+                    value={audioLatency}
+                    onValueChange={setAudioLatency}
+                    minimumTrackTintColor="#3B82F6"
+                    maximumTrackTintColor="rgba(255,255,255,0.1)"
+                    thumbTintColor="#FFFFFF"
+                  />
+                </View>
+                <View style={styles.latencyPresets}>
+                  <GlassPill
+                    label="0ms"
+                    isActive={audioLatency === 0}
+                    onPress={() => setAudioLatency(0)}
+                    accentColor="#9CA3AF"
+                    size="small"
+                  />
+                  <GlassPill
+                    label="100ms"
+                    isActive={audioLatency === 100}
+                    onPress={() => setAudioLatency(100)}
+                    accentColor="#3B82F6"
+                    size="small"
+                  />
+                  <GlassPill
+                    label="200ms"
+                    isActive={audioLatency === 200}
+                    onPress={() => setAudioLatency(200)}
+                    accentColor="#3B82F6"
+                    size="small"
+                  />
+                  <GlassPill
+                    label="300ms"
+                    isActive={audioLatency === 300}
+                    onPress={() => setAudioLatency(300)}
+                    accentColor="#3B82F6"
+                    size="small"
+                  />
+                </View>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.calibrateButton,
+                    pressed && styles.calibrateButtonPressed,
+                  ]}
+                  onPress={startCalibration}
+                >
+                  <Text style={styles.calibrateButtonText}>Auto-Calibrate</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+
           {/* Spacer for safe area */}
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -306,5 +425,113 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  // Bluetooth Latency styles
+  latencyValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+  },
+  latencyHint: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: 12,
+    lineHeight: 16,
+  },
+  latencyPresets: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  calibrateButton: {
+    marginTop: 16,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.4)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  calibrateButtonPressed: {
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  calibrateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+    letterSpacing: 0.5,
+  },
+  calibrationContainer: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  calibrationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  calibrationTapButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+  },
+  calibrationTapButtonPressed: {
+    backgroundColor: '#2563EB',
+    transform: [{ scale: 0.95 }],
+  },
+  calibrationTapText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+  },
+  calibrationProgress: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  calibrationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  calibrationCancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  calibrationCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+  },
+  calibrationApplyButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+  },
+  calibrationButtonDisabled: {
+    opacity: 0.4,
+  },
+  calibrationApplyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

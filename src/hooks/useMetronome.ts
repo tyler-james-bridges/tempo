@@ -13,11 +13,18 @@ import { AudioContext, OscillatorType } from 'react-native-audio-api';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = 'metronome_settings_v4';
+const STORAGE_KEY = 'metronome_settings_v5';
 
 export type SoundType = 'click' | 'beep' | 'wood' | 'cowbell';
 export type SubdivisionType = 1 | 2 | 3 | 4;
 export type AccentPattern = 0 | 1 | 2 | 3 | 4;
+
+// Bluetooth latency compensation: typical ranges
+// Wired/built-in: 0-20ms
+// Bluetooth A2DP (SBC): 100-200ms
+// Bluetooth A2DP (AAC): 120-180ms
+// Bluetooth A2DP (aptX): 70-150ms
+// Megavox and similar speakers: 150-300ms
 
 // Scheduling constants (from Chris Wilson's pattern)
 const LOOKAHEAD = 25.0;          // How often to call scheduler (ms)
@@ -75,6 +82,9 @@ export function useMetronome() {
   const [countInEnabled, setCountInEnabledState] = useState(false);
   const [isCountingIn, setIsCountingIn] = useState(false);
   const [muteAudio, setMuteAudioState] = useState(false);
+  // Bluetooth/audio latency compensation in milliseconds
+  // Audio is scheduled earlier by this amount so it arrives on time through BT speakers
+  const [audioLatency, setAudioLatencyState] = useState(0);
 
   // Audio context ref
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -96,9 +106,11 @@ export function useMetronome() {
   const soundTypeRef = useRef(soundType);
   const accentPatternRef = useRef(accentPattern);
   const countInEnabledRef = useRef(countInEnabled);
+  const audioLatencyRef = useRef(audioLatency);
 
   // Keep refs in sync
   muteAudioRef.current = muteAudio;
+  audioLatencyRef.current = audioLatency;
   isCountingInRef.current = isCountingIn;
   tempoRef.current = tempo;
   beatsRef.current = beats;
@@ -123,6 +135,7 @@ export function useMetronome() {
               accentPattern?: AccentPattern;
               countInEnabled?: boolean;
               muteAudio?: boolean;
+              audioLatency?: number;
             };
             if (d.tempo) setTempoState(d.tempo);
             if (d.beats) setBeatsState(d.beats);
@@ -132,6 +145,7 @@ export function useMetronome() {
             if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
             if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
             if (d.muteAudio !== undefined) setMuteAudioState(d.muteAudio);
+            if (d.audioLatency !== undefined) setAudioLatencyState(d.audioLatency);
           } catch (parseError) {
             console.warn('Failed to parse metronome settings:', parseError);
             // Clear corrupted data
@@ -147,11 +161,11 @@ export function useMetronome() {
   // Save settings
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio
+      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, audioLatency
     })).catch((error) => {
       console.warn('Failed to save metronome settings:', error);
     });
-  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio]);
+  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, audioLatency]);
 
   // Initialize audio context with fallback for unsupported devices
   useEffect(() => {
@@ -184,6 +198,11 @@ export function useMetronome() {
   /**
    * Schedule a single click/beep at a precise time using Web Audio
    * Creates an oscillator with envelope for each note
+   *
+   * BLUETOOTH LATENCY COMPENSATION:
+   * - Visual/haptic feedback fires at the scheduled "time"
+   * - Audio is scheduled EARLIER by audioLatency ms so it arrives on time through BT speakers
+   * - This compensates for A2DP encoding/transmission delay (typically 100-300ms)
    */
   const scheduleNote = useCallback((time: number, beat: number, sub: number, isCountIn: boolean) => {
     const ctx = audioContextRef.current;
@@ -193,13 +212,18 @@ export function useMetronome() {
     const vol = volumeRef.current;
     const type = soundTypeRef.current;
     const params = SOUND_PARAMS[type];
+    const latencyCompensation = audioLatencyRef.current / 1000; // Convert ms to seconds
 
     // Determine if this is a main beat or subdivision
     const isMainBeat = sub === 1;
     const accented = isCountIn || (isMainBeat && isAccented(beat));
 
     // Update visual state on main beats (schedule this for the JS thread)
+    // Visual/haptic feedback always fires at the intended "time" - no latency adjustment
     if (isMainBeat) {
+      // Record scheduled time for latency calibration
+      lastScheduledBeatTimeRef.current = time;
+
       const delay = Math.max(0, (time - ctx.currentTime) * 1000);
       setTimeout(() => {
         if (isCountIn) {
@@ -217,6 +241,11 @@ export function useMetronome() {
     // Skip audio if muted
     if (muted) return;
 
+    // BLUETOOTH LATENCY COMPENSATION:
+    // Schedule audio EARLIER by the latency amount so it arrives through BT on time
+    // This is the key to making Bluetooth speakers work correctly
+    const audioTime = Math.max(ctx.currentTime, time - latencyCompensation);
+
     // Create oscillator and gain nodes for this note
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -224,7 +253,7 @@ export function useMetronome() {
     // Set oscillator properties
     const freq = accented ? params.accentFreq : params.normalFreq;
     oscillator.type = params.type;
-    oscillator.frequency.setValueAtTime(freq, time);
+    oscillator.frequency.setValueAtTime(freq, audioTime);
 
     // For cowbell, add a second oscillator for inharmonic sound
     if (type === 'cowbell') {
@@ -232,35 +261,35 @@ export function useMetronome() {
       const gain2 = ctx.createGain();
       const freq2 = accented ? 845 : 800;
       osc2.type = 'square';
-      osc2.frequency.setValueAtTime(freq2, time);
+      osc2.frequency.setValueAtTime(freq2, audioTime);
 
       // Envelope for second oscillator
-      const attackEnd = time + 0.002;
+      const attackEnd = audioTime + 0.002;
       const peakVol = vol * (accented ? 0.4 : 0.3) * (isMainBeat ? 1 : 0.5);
-      gain2.gain.setValueAtTime(0, time);
+      gain2.gain.setValueAtTime(0, audioTime);
       gain2.gain.linearRampToValueAtTime(peakVol, attackEnd);
-      gain2.gain.exponentialRampToValueAtTime(0.001, time + params.duration);
+      gain2.gain.exponentialRampToValueAtTime(0.001, audioTime + params.duration);
 
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
-      osc2.start(time);
-      osc2.stop(time + params.duration);
+      osc2.start(audioTime);
+      osc2.stop(audioTime + params.duration);
     }
 
     // Create envelope: quick attack, exponential decay
-    const attackEnd = time + 0.002;
+    const attackEnd = audioTime + 0.002;
     const peakVol = vol * (accented ? 1.0 : 0.85) * (isMainBeat ? 1 : 0.5);
 
-    gainNode.gain.setValueAtTime(0, time);
+    gainNode.gain.setValueAtTime(0, audioTime);
     gainNode.gain.linearRampToValueAtTime(peakVol, attackEnd);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, time + params.duration);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioTime + params.duration);
 
     // Connect and play
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    oscillator.start(time);
-    oscillator.stop(time + params.duration);
+    oscillator.start(audioTime);
+    oscillator.stop(audioTime + params.duration);
   }, [isAccented]);
 
   /**
@@ -420,6 +449,109 @@ export function useMetronome() {
     setMuteAudioState(muted);
   }, []);
 
+  // Bluetooth/audio output latency compensation (0-500ms)
+  const setAudioLatency = useCallback((latency: number) => {
+    setAudioLatencyState(Math.max(0, Math.min(500, Math.round(latency))));
+  }, []);
+
+  /**
+   * LATENCY CALIBRATION SYSTEM
+   *
+   * How it works:
+   * 1. User starts calibration mode (metronome plays at fixed tempo)
+   * 2. User taps when they HEAR the beat (not see it)
+   * 3. We track the difference between when we scheduled the beat vs when user tapped
+   * 4. The average difference = the Bluetooth latency
+   *
+   * This is the killer feature for Bluetooth speakers like Megavox
+   */
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const calibrationTapsRef = useRef<{ scheduled: number; tapped: number }[]>([]);
+  const lastScheduledBeatTimeRef = useRef(0);
+  const calibrationBeatsPlayedRef = useRef(0);
+
+  // Track when we schedule each beat for calibration purposes
+  const recordScheduledBeatTime = useCallback((time: number) => {
+    lastScheduledBeatTimeRef.current = time;
+    if (isCalibrating) {
+      calibrationBeatsPlayedRef.current++;
+    }
+  }, [isCalibrating]);
+
+  // User taps when they hear the beat - we record the difference
+  const calibrationTap = useCallback(() => {
+    if (!isCalibrating) return;
+
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const scheduled = lastScheduledBeatTimeRef.current;
+
+    // Only record if we have a recent scheduled beat (within ~1 second)
+    if (scheduled > 0 && now - scheduled < 1) {
+      // The difference is how late the user tapped after we scheduled
+      // This represents the perceived latency
+      const latencyMs = (now - scheduled) * 1000;
+
+      // Only record reasonable latencies (0-600ms)
+      if (latencyMs >= 0 && latencyMs <= 600) {
+        calibrationTapsRef.current.push({ scheduled, tapped: now });
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+  }, [isCalibrating]);
+
+  // Calculate the measured latency from calibration taps
+  const getCalibrationResult = useCallback((): number | null => {
+    const taps = calibrationTapsRef.current;
+    if (taps.length < 4) return null;
+
+    // Calculate latencies and use median for robustness
+    const latencies = taps.map(t => (t.tapped - t.scheduled) * 1000);
+    latencies.sort((a, b) => a - b);
+
+    // Remove outliers (top and bottom 20%)
+    const trimCount = Math.floor(latencies.length * 0.2);
+    const trimmed = latencies.slice(trimCount, latencies.length - trimCount);
+
+    if (trimmed.length === 0) return null;
+
+    // Return median of trimmed values
+    const median = trimmed[Math.floor(trimmed.length / 2)];
+    return Math.round(median);
+  }, []);
+
+  // Start calibration mode
+  const startCalibration = useCallback(() => {
+    calibrationTapsRef.current = [];
+    calibrationBeatsPlayedRef.current = 0;
+    setIsCalibrating(true);
+
+    // Temporarily set latency to 0 during calibration
+    // (we want to measure the raw latency)
+    audioLatencyRef.current = 0;
+
+    if (!isPlaying) {
+      start();
+    }
+  }, [isPlaying, start]);
+
+  // Stop calibration and apply result
+  const stopCalibration = useCallback((applyResult: boolean = true) => {
+    setIsCalibrating(false);
+
+    if (applyResult) {
+      const result = getCalibrationResult();
+      if (result !== null && result >= 0) {
+        setAudioLatency(result);
+      }
+    }
+
+    // Restore the audio latency ref
+    audioLatencyRef.current = audioLatency;
+  }, [getCalibrationResult, setAudioLatency, audioLatency]);
+
   // Tap tempo
   const tapTimes = useRef<number[]>([]);
   const tapTempo = useCallback(() => {
@@ -466,6 +598,9 @@ export function useMetronome() {
     countInEnabled,
     isCountingIn,
     muteAudio,
+    audioLatency,
+    isCalibrating,
+    calibrationTapCount: calibrationTapsRef.current.length,
     isAccented,
     toggle,
     start,
@@ -478,6 +613,11 @@ export function useMetronome() {
     setAccentPattern,
     setCountInEnabled,
     setMuteAudio,
+    setAudioLatency,
+    startCalibration,
+    stopCalibration,
+    calibrationTap,
+    getCalibrationResult,
     tapTempo,
   };
 }
