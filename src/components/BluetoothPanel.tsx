@@ -2,76 +2,115 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { colors, font, spacing, radius } from '../constants/theme';
-import { BluetoothAudioHook } from '../hooks/useBluetoothAudio';
 
 interface BluetoothPanelProps {
-  bluetooth: BluetoothAudioHook;
+  audioLatency: number;
+  setAudioLatency: (ms: number) => void;
+  isCalibrating: boolean;
+  calibrationTapCount: number;
+  startCalibration: () => void;
+  stopCalibration: (applyResult?: boolean) => void;
+  calibrationTap: () => void;
+  getCalibrationResult: () => number | null;
 }
 
+// Device presets with typical latency values
 const PRESETS = [
-  { key: 'wired' as const, label: 'Wired', desc: '0ms', icon: '🔌' },
-  { key: 'generic' as const, label: 'Bluetooth', desc: '150ms', icon: '📶' },
-  { key: 'megavox' as const, label: 'Megavox', desc: '200ms', icon: '📢' },
-  { key: 'custom' as const, label: 'Custom', desc: 'Manual', icon: '⚙️' },
+  { key: 'wired', label: 'Wired', latency: 0, approx: false },
+  { key: 'generic', label: 'Bluetooth', latency: 150, approx: true },
+  { key: 'megavox', label: 'Megavox', latency: 200, approx: true },
 ];
 
-export function BluetoothPanel({ bluetooth }: BluetoothPanelProps) {
-  const {
-    settings,
-    isCalibrating,
-    calibrationStep,
-    setDevicePreset,
-    setLatencyCompensation,
-    setVisualLeadEnabled,
-    startCalibration,
-    cancelCalibration,
-  } = bluetooth;
+export function BluetoothPanel({
+  audioLatency,
+  setAudioLatency,
+  isCalibrating,
+  calibrationTapCount,
+  startCalibration,
+  stopCalibration,
+  calibrationTap,
+}: BluetoothPanelProps) {
+  // Determine which preset is active based on current latency
+  const activePreset = PRESETS.find(p => p.latency === audioLatency)?.key || 'custom';
 
   return (
     <View style={styles.container}>
       {/* Device Preset */}
-      <Text style={styles.label}>OUTPUT DEVICE</Text>
-      <View style={styles.presetGrid}>
-        {PRESETS.map((preset) => (
+      <View style={styles.section}>
+        <Text style={styles.label}>OUTPUT DEVICE</Text>
+        <View style={styles.presetGrid}>
+          {PRESETS.map((preset) => {
+            const isActive = activePreset === preset.key;
+            const latencyLabel = preset.latency === 0
+              ? 'No delay'
+              : `${preset.approx ? '~' : ''}${preset.latency} ms`;
+            return (
+              <Pressable
+                key={preset.key}
+                style={[styles.presetCard, isActive && styles.presetCardActive]}
+                onPress={() => setAudioLatency(preset.latency)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                accessibilityLabel={`${preset.label}, ${latencyLabel}`}
+              >
+                <Text style={[styles.presetLabel, isActive && styles.presetLabelActive]}>
+                  {preset.label}
+                </Text>
+                <View style={styles.presetLatencyRow}>
+                  {preset.approx && (
+                    <Text style={[styles.presetApprox, isActive && styles.presetDescActive]}>~</Text>
+                  )}
+                  <Text style={[styles.presetLatencyValue, isActive && styles.presetLatencyValueActive]}>
+                    {preset.latency}
+                  </Text>
+                  <Text style={[styles.presetLatencyUnit, isActive && styles.presetDescActive]}>
+                    ms
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+          {/* Custom preset card */}
           <Pressable
-            key={preset.key}
-            style={[
-              styles.presetCard,
-              settings.devicePreset === preset.key && styles.presetCardActive,
-            ]}
-            onPress={() => setDevicePreset(preset.key)}
+            style={[styles.presetCard, activePreset === 'custom' && styles.presetCardActive]}
+            onPress={() => {}} // No action - just shows when custom value is set
+            accessibilityRole="button"
+            accessibilityState={{ selected: activePreset === 'custom' }}
+            accessibilityLabel={`Custom, ${audioLatency} milliseconds`}
           >
-            <Text style={styles.presetIcon}>{preset.icon}</Text>
-            <Text
-              style={[
-                styles.presetLabel,
-                settings.devicePreset === preset.key && styles.presetLabelActive,
-              ]}
-            >
-              {preset.label}
+            <Text style={[styles.presetLabel, activePreset === 'custom' && styles.presetLabelActive]}>
+              Custom
             </Text>
-            <Text style={styles.presetDesc}>{preset.desc}</Text>
+            <Text style={[styles.presetDesc, activePreset === 'custom' && styles.presetDescActive]}>
+              Manual
+            </Text>
           </Pressable>
-        ))}
+        </View>
       </View>
 
       {/* Latency slider */}
-      <View style={styles.sliderSection}>
+      <View style={styles.section}>
         <View style={styles.sliderHeader}>
           <Text style={styles.label}>LATENCY COMPENSATION</Text>
-          <Text style={styles.sliderValue}>{settings.latencyCompensation}ms</Text>
+          <View style={styles.sliderValueContainer}>
+            <Text style={styles.sliderValue}>{audioLatency}</Text>
+            <Text style={styles.sliderValueUnit}>ms</Text>
+          </View>
         </View>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={500}
-          step={10}
-          value={settings.latencyCompensation}
-          onValueChange={setLatencyCompensation}
-          minimumTrackTintColor={colors.accent.primary}
-          maximumTrackTintColor={colors.border.medium}
-          thumbTintColor={colors.text.primary}
-        />
+        <View style={styles.sliderContainer}>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={500}
+            step={10}
+            value={audioLatency}
+            onValueChange={setAudioLatency}
+            minimumTrackTintColor={colors.accent.primary}
+            maximumTrackTintColor={colors.border.medium}
+            thumbTintColor={colors.text.primary}
+            accessibilityLabel={`Latency compensation ${audioLatency} milliseconds`}
+          />
+        </View>
         <View style={styles.sliderLabels}>
           <Text style={styles.sliderLabel}>0ms</Text>
           <Text style={styles.sliderLabel}>250ms</Text>
@@ -79,49 +118,49 @@ export function BluetoothPanel({ bluetooth }: BluetoothPanelProps) {
         </View>
       </View>
 
-      {/* Visual Lead Toggle */}
-      <View style={styles.optionRow}>
-        <View>
-          <Text style={styles.optionLabel}>Visual Lead</Text>
-          <Text style={styles.optionDesc}>
-            Show beat indicator ahead of audio
-          </Text>
-        </View>
-        <Pressable
-          style={[styles.toggle, settings.visualLeadEnabled && styles.toggleActive]}
-          onPress={() => setVisualLeadEnabled(!settings.visualLeadEnabled)}
-        >
-          <View
-            style={[
-              styles.toggleThumb,
-              settings.visualLeadEnabled && styles.toggleThumbActive,
-            ]}
-          />
-        </Pressable>
-      </View>
-
       {/* Calibration */}
-      <View style={styles.calibrationSection}>
+      <View style={styles.section}>
         <Text style={styles.label}>AUTO-CALIBRATE</Text>
         {isCalibrating ? (
           <View style={styles.calibrationActive}>
             <Text style={styles.calibrationText}>
-              Tap when you HEAR the beat ({calibrationStep}/8)
+              Tap when you HEAR the beat
+            </Text>
+            <Text style={styles.calibrationStep}>
+              {calibrationTapCount} of 8 taps
             </Text>
             <View style={styles.calibrationProgress}>
               <View
                 style={[
                   styles.calibrationBar,
-                  { width: `${(calibrationStep / 8) * 100}%` },
+                  { width: `${(calibrationTapCount / 8) * 100}%` },
                 ]}
               />
             </View>
-            <Pressable style={styles.cancelButton} onPress={cancelCalibration}>
+            <Pressable
+              style={styles.tapArea}
+              onPress={calibrationTap}
+              accessibilityRole="button"
+              accessibilityLabel="Tap when you hear the beat"
+            >
+              <Text style={styles.tapAreaText}>TAP HERE</Text>
+            </Pressable>
+            <Pressable
+              style={styles.cancelButton}
+              onPress={() => stopCalibration(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel calibration"
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
           </View>
         ) : (
-          <Pressable style={styles.calibrateButton} onPress={startCalibration}>
+          <Pressable
+            style={styles.calibrateButton}
+            onPress={startCalibration}
+            accessibilityRole="button"
+            accessibilityLabel="Start automatic latency calibration"
+          >
             <Text style={styles.calibrateButtonText}>Start Calibration</Text>
             <Text style={styles.calibrateButtonDesc}>
               Tap in sync with what you hear to detect latency
@@ -144,197 +183,238 @@ export function BluetoothPanel({ bluetooth }: BluetoothPanelProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.xl,
+    gap: spacing.lg,
+  },
+  section: {
+    marginBottom: spacing.md,
   },
   label: {
     ...font.label,
+    fontSize: 13,
     color: colors.text.tertiary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
+    letterSpacing: 1.5,
   },
 
-  // Presets
+  // Presets - improved grid with larger touch targets
   presetGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   presetCard: {
-    flex: 1,
-    minWidth: '45%',
+    width: '47%',
     backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     borderColor: colors.border.subtle,
-    padding: spacing.md,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
-    gap: spacing.xs,
+    minHeight: 80,
+    justifyContent: 'center',
   },
   presetCardActive: {
     backgroundColor: colors.accent.subtle,
     borderColor: colors.accent.primary,
-  },
-  presetIcon: {
-    fontSize: 24,
+    borderWidth: 2,
   },
   presetLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text.secondary,
+    marginBottom: 4,
   },
   presetLabelActive: {
     color: colors.accent.primary,
   },
   presetDesc: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.text.disabled,
+    textAlign: 'center',
+  },
+  presetDescActive: {
+    color: colors.accent.dim,
+  },
+  // Latency display in preset cards
+  presetLatencyRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+  },
+  presetApprox: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: colors.text.disabled,
+    marginRight: 1,
+  },
+  presetLatencyValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text.disabled,
+    fontVariant: ['tabular-nums'],
+  },
+  presetLatencyValueActive: {
+    color: colors.accent.primary,
+  },
+  presetLatencyUnit: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: colors.text.disabled,
+    marginLeft: 2,
   },
 
-  // Slider
-  sliderSection: {
-    marginTop: spacing.sm,
-  },
+  // Slider - consistent with SettingsDrawer
   sliderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  sliderValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    minWidth: 60,
+    justifyContent: 'flex-end',
   },
   sliderValue: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.accent.primary,
     fontVariant: ['tabular-nums'],
   },
+  sliderValueUnit: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.accent.dim,
+    marginLeft: 2,
+  },
+  sliderContainer: {
+    backgroundColor: colors.bg.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
   slider: {
-    height: 40,
-    marginHorizontal: -spacing.sm,
+    height: 44,
   },
   sliderLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   sliderLabel: {
-    fontSize: 10,
-    color: colors.text.disabled,
-  },
-
-  // Option row
-  optionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
-  },
-  optionLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.text.secondary,
-  },
-  optionDesc: {
     fontSize: 12,
+    fontWeight: '600',
     color: colors.text.disabled,
-    marginTop: 2,
-  },
-  toggle: {
-    width: 48,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.bg.surface,
-    borderWidth: 1,
-    borderColor: colors.border.medium,
-    padding: 2,
-  },
-  toggleActive: {
-    backgroundColor: colors.accent.primary,
-    borderColor: colors.accent.primary,
-  },
-  toggleThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.text.tertiary,
-  },
-  toggleThumbActive: {
-    backgroundColor: colors.text.primary,
-    marginLeft: 'auto',
+    fontVariant: ['tabular-nums'],
   },
 
-  // Calibration
-  calibrationSection: {},
+  // Calibration - more prominent design
   calibrationActive: {
     backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
     alignItems: 'center',
-    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   calibrationText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  calibrationStep: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.text.secondary,
-    textAlign: 'center',
+    color: colors.accent.primary,
+    marginBottom: spacing.lg,
   },
   calibrationProgress: {
     width: '100%',
-    height: 4,
+    height: 6,
     backgroundColor: colors.border.subtle,
-    borderRadius: 2,
+    borderRadius: 3,
     overflow: 'hidden',
+    marginBottom: spacing.lg,
   },
   calibrationBar: {
     height: '100%',
     backgroundColor: colors.accent.primary,
+    borderRadius: 3,
+  },
+  tapArea: {
+    backgroundColor: colors.accent.subtle,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.accent.primary,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xxl,
+    marginBottom: spacing.lg,
+  },
+  tapAreaText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.accent.primary,
   },
   cancelButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.text.tertiary,
   },
   calibrateButton: {
     backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 2,
     borderColor: colors.border.medium,
-    padding: spacing.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
+    minHeight: 72,
+    justifyContent: 'center',
   },
   calibrateButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.accent.primary,
+    marginBottom: 4,
   },
   calibrateButtonDesc: {
-    fontSize: 12,
-    color: colors.text.disabled,
-    marginTop: spacing.xs,
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.text.tertiary,
     textAlign: 'center',
+    lineHeight: 18,
   },
 
-  // Info
+  // Info box - refined styling
   infoBox: {
     backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderLeftWidth: 3,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderLeftWidth: 4,
     borderLeftColor: colors.accent.dim,
   },
   infoTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text.secondary,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   infoText: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '400',
     color: colors.text.tertiary,
-    lineHeight: 18,
+    lineHeight: 20,
   },
 });

@@ -20,21 +20,25 @@ export function GlassPill({
   style,
   icon,
 }: GlassPillProps) {
+  // Ensure minimum 44px touch target for accessibility (iOS HIG)
   const sizeStyles = {
-    small: { paddingVertical: 6, paddingHorizontal: 12 },
-    medium: { paddingVertical: 10, paddingHorizontal: 18 },
-    large: { paddingVertical: 14, paddingHorizontal: 24 },
+    small: { paddingVertical: 10, paddingHorizontal: 14, minHeight: 44 },
+    medium: { paddingVertical: 12, paddingHorizontal: 20, minHeight: 44 },
+    large: { paddingVertical: 16, paddingHorizontal: 28, minHeight: 48 },
   };
 
   const textSizes = {
-    small: 11,
-    medium: 13,
-    large: 15,
+    small: 13,
+    medium: 14,
+    large: 16,
   };
 
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
+      accessibilityLabel={label}
       style={({ pressed }) => [
         styles.pill,
         sizeStyles[size],
@@ -80,22 +84,23 @@ export function GlassPill({
 
 const styles = StyleSheet.create({
   pill: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
     overflow: 'hidden',
     position: 'relative',
+    justifyContent: 'center',
   },
   pillActive: {
-    borderWidth: 1.5,
+    borderWidth: 2,
   },
   pillPressed: {
-    opacity: 0.8,
+    opacity: 0.85,
     transform: [{ scale: 0.98 }],
   },
   glassBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   activeGlow: {
     position: 'absolute',
@@ -112,12 +117,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
   },
   label: {
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 0.5,
+    color: 'rgba(255,255,255,0.65)',
+    letterSpacing: 0.3,
   },
   labelActive: {
     fontWeight: '700',
