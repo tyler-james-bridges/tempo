@@ -2,6 +2,7 @@
 export { BeatIndicator } from './BeatIndicator';
 export { SettingsDrawer } from './SettingsDrawer';
 export { BluetoothPanel } from './BluetoothPanel';
+export { SetlistPanel } from './SetlistPanel';
 
 // Legacy components (kept for reference)
 export { BeatRing } from './modern/BeatRing';

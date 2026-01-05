@@ -12,7 +12,9 @@ import Slider from '@react-native-community/slider';
 import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS, DRUMLINE_PRESETS, SHOW_PRESETS } from '../constants/theme';
 import { SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
 import { useBluetoothAudio } from '../hooks/useBluetoothAudio';
+import { useSetlist } from '../hooks/useSetlist';
 import { BluetoothPanel } from './BluetoothPanel';
+import { SetlistPanel } from './SetlistPanel';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -45,7 +47,7 @@ const SOUNDS: { type: SoundType; label: string }[] = [
   { type: 'cowbell', label: 'Bell' },
 ];
 
-type Tab = 'tempo' | 'sound' | 'bluetooth';
+type Tab = 'tempo' | 'sound' | 'setlist' | 'bluetooth';
 
 export function SettingsDrawer({
   visible,
@@ -73,6 +75,7 @@ export function SettingsDrawer({
   const [activeTab, setActiveTab] = useState<Tab>('tempo');
 
   const bluetooth = useBluetoothAudio();
+  const setlistManager = useSetlist();
 
   useEffect(() => {
     if (visible) {
@@ -140,6 +143,21 @@ export function SettingsDrawer({
             <Text style={[styles.tabText, activeTab === 'sound' && styles.tabTextActive]}>
               Sound
             </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tab, activeTab === 'setlist' && styles.tabActive]}
+            onPress={() => setActiveTab('setlist')}
+          >
+            <Text style={[styles.tabText, activeTab === 'setlist' && styles.tabTextActive]}>
+              Setlist
+            </Text>
+            {setlistManager.activeSetlist && (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>
+                  {setlistManager.activeItemIndex + 1}/{setlistManager.activeSetlist.items.length}
+                </Text>
+              </View>
+            )}
           </Pressable>
           <Pressable
             style={[styles.tab, activeTab === 'bluetooth' && styles.tabActive]}
@@ -400,6 +418,16 @@ export function SettingsDrawer({
                 </View>
               </View>
             </>
+          )}
+
+          {activeTab === 'setlist' && (
+            <SetlistPanel
+              setlist={setlistManager}
+              onSelectTempo={(newTempo, newBeats) => {
+                setTempo(newTempo);
+                setBeats(newBeats);
+              }}
+            />
           )}
 
           {activeTab === 'bluetooth' && (
