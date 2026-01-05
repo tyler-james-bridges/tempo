@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   Dimensions,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS, DRUMLINE_PRESETS } from '../constants/theme';
+import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS, DRUMLINE_PRESETS, SHOW_PRESETS } from '../constants/theme';
 import { SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
+import { useBluetoothAudio } from '../hooks/useBluetoothAudio';
+import { BluetoothPanel } from './BluetoothPanel';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -43,6 +45,8 @@ const SOUNDS: { type: SoundType; label: string }[] = [
   { type: 'cowbell', label: 'Bell' },
 ];
 
+type Tab = 'tempo' | 'sound' | 'bluetooth';
+
 export function SettingsDrawer({
   visible,
   onClose,
@@ -66,6 +70,9 @@ export function SettingsDrawer({
 }: SettingsDrawerProps) {
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const [activeTab, setActiveTab] = useState<Tab>('tempo');
+
+  const bluetooth = useBluetoothAudio();
 
   useEffect(() => {
     if (visible) {
@@ -116,212 +123,288 @@ export function SettingsDrawer({
           <View style={styles.handle} />
         </View>
 
+        {/* Tabs */}
+        <View style={styles.tabBar}>
+          <Pressable
+            style={[styles.tab, activeTab === 'tempo' && styles.tabActive]}
+            onPress={() => setActiveTab('tempo')}
+          >
+            <Text style={[styles.tabText, activeTab === 'tempo' && styles.tabTextActive]}>
+              Tempo
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tab, activeTab === 'sound' && styles.tabActive]}
+            onPress={() => setActiveTab('sound')}
+          >
+            <Text style={[styles.tabText, activeTab === 'sound' && styles.tabTextActive]}>
+              Sound
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tab, activeTab === 'bluetooth' && styles.tabActive]}
+            onPress={() => setActiveTab('bluetooth')}
+          >
+            <Text style={[styles.tabText, activeTab === 'bluetooth' && styles.tabTextActive]}>
+              Output
+            </Text>
+            {bluetooth.settings.devicePreset !== 'wired' && (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>
+                  {bluetooth.settings.latencyCompensation}ms
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Tempo Presets */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>DRUMLINE PRESETS</Text>
-            <View style={styles.presetRow}>
-              {DRUMLINE_PRESETS.map((p) => (
-                <Pressable
-                  key={p.bpm}
-                  style={[
-                    styles.presetChip,
-                    tempo === p.bpm && styles.presetChipActive,
-                  ]}
-                  onPress={() => setTempo(p.bpm)}
-                >
-                  <Text
-                    style={[
-                      styles.presetBpm,
-                      tempo === p.bpm && styles.presetTextActive,
-                    ]}
-                  >
-                    {p.bpm}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.presetName,
-                      tempo === p.bpm && styles.presetTextActive,
-                    ]}
-                  >
-                    {p.name}
-                  </Text>
+          {activeTab === 'tempo' && (
+            <>
+              {/* Drumline Presets */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>DRUMLINE</Text>
+                <View style={styles.presetRow}>
+                  {DRUMLINE_PRESETS.map((p) => (
+                    <Pressable
+                      key={p.bpm}
+                      style={[
+                        styles.presetChip,
+                        tempo === p.bpm && styles.presetChipActive,
+                      ]}
+                      onPress={() => setTempo(p.bpm)}
+                    >
+                      <Text
+                        style={[
+                          styles.presetBpm,
+                          tempo === p.bpm && styles.presetTextActive,
+                        ]}
+                      >
+                        {p.bpm}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.presetName,
+                          tempo === p.bpm && styles.presetTextActive,
+                        ]}
+                      >
+                        {p.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Show Presets */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>SHOW TEMPOS</Text>
+                <View style={styles.chipRow}>
+                  {SHOW_PRESETS.map((p) => (
+                    <Pressable
+                      key={p.bpm}
+                      style={[
+                        styles.chip,
+                        tempo === p.bpm && styles.chipActive,
+                      ]}
+                      onPress={() => setTempo(p.bpm)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          tempo === p.bpm && styles.chipTextActive,
+                        ]}
+                      >
+                        {p.bpm}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Tap Tempo */}
+              <View style={styles.section}>
+                <Pressable style={styles.tapButton} onPress={tapTempo}>
+                  <Text style={styles.tapButtonText}>TAP TEMPO</Text>
                 </Pressable>
-              ))}
-            </View>
-          </View>
+              </View>
 
-          {/* Tap Tempo */}
-          <View style={styles.section}>
-            <Pressable style={styles.tapButton} onPress={tapTempo}>
-              <Text style={styles.tapButtonText}>TAP TEMPO</Text>
-            </Pressable>
-          </View>
+              {/* Time Signature */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>TIME SIGNATURE</Text>
+                <View style={styles.chipRow}>
+                  {TIME_SIGS.map((ts) => (
+                    <Pressable
+                      key={ts.label}
+                      style={[
+                        styles.chip,
+                        beats === ts.beats && styles.chipActive,
+                      ]}
+                      onPress={() => setBeats(ts.beats)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          beats === ts.beats && styles.chipTextActive,
+                        ]}
+                      >
+                        {ts.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
 
-          {/* Time Signature */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>TIME SIGNATURE</Text>
-            <View style={styles.chipRow}>
-              {TIME_SIGS.map((ts) => (
-                <Pressable
-                  key={ts.label}
-                  style={[
-                    styles.chip,
-                    beats === ts.beats && styles.chipActive,
-                  ]}
-                  onPress={() => setBeats(ts.beats)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      beats === ts.beats && styles.chipTextActive,
-                    ]}
-                  >
-                    {ts.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+              {/* Subdivision */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>SUBDIVISION</Text>
+                <View style={styles.chipRow}>
+                  {SUBDIVISIONS.map((s) => (
+                    <Pressable
+                      key={s.value}
+                      style={[
+                        styles.chip,
+                        subdivision === s.value && styles.chipActive,
+                      ]}
+                      onPress={() => setSubdivision(s.value as SubdivisionType)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          subdivision === s.value && styles.chipTextActive,
+                        ]}
+                      >
+                        {s.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
 
-          {/* Subdivision */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>SUBDIVISION</Text>
-            <View style={styles.chipRow}>
-              {SUBDIVISIONS.map((s) => (
-                <Pressable
-                  key={s.value}
-                  style={[
-                    styles.chip,
-                    subdivision === s.value && styles.chipActive,
-                  ]}
-                  onPress={() => setSubdivision(s.value as SubdivisionType)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      subdivision === s.value && styles.chipTextActive,
-                    ]}
-                  >
-                    {s.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+              {/* Accent Pattern */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>ACCENT</Text>
+                <View style={styles.chipRow}>
+                  {[
+                    { p: 0 as AccentPattern, label: 'First' },
+                    { p: 1 as AccentPattern, label: 'All' },
+                    { p: 2 as AccentPattern, label: 'Every 2' },
+                    { p: 3 as AccentPattern, label: 'Every 3' },
+                    { p: 4 as AccentPattern, label: 'Every 4' },
+                  ].map((a) => (
+                    <Pressable
+                      key={a.p}
+                      style={[
+                        styles.chip,
+                        accentPattern === a.p && styles.chipActive,
+                      ]}
+                      onPress={() => setAccentPattern(a.p)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          accentPattern === a.p && styles.chipTextActive,
+                        ]}
+                      >
+                        {a.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </>
+          )}
 
-          {/* Sound */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>SOUND</Text>
-            <View style={styles.chipRow}>
-              {SOUNDS.map((s) => (
-                <Pressable
-                  key={s.type}
-                  style={[
-                    styles.chip,
-                    soundType === s.type && styles.chipActive,
-                  ]}
-                  onPress={() => setSoundType(s.type)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      soundType === s.type && styles.chipTextActive,
-                    ]}
-                  >
-                    {s.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          {activeTab === 'sound' && (
+            <>
+              {/* Sound */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>CLICK SOUND</Text>
+                <View style={styles.soundGrid}>
+                  {SOUNDS.map((s) => (
+                    <Pressable
+                      key={s.type}
+                      style={[
+                        styles.soundCard,
+                        soundType === s.type && styles.soundCardActive,
+                      ]}
+                      onPress={() => setSoundType(s.type)}
+                    >
+                      <Text
+                        style={[
+                          styles.soundLabel,
+                          soundType === s.type && styles.soundLabelActive,
+                        ]}
+                      >
+                        {s.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
 
-          {/* Volume */}
-          <View style={styles.section}>
-            <View style={styles.sliderHeader}>
-              <Text style={styles.sectionLabel}>VOLUME</Text>
-              <Text style={styles.sliderValue}>{Math.round(volume * 100)}%</Text>
-            </View>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={1}
-              value={volume}
-              onValueChange={setVolume}
-              minimumTrackTintColor={colors.accent.primary}
-              maximumTrackTintColor={colors.border.medium}
-              thumbTintColor={colors.text.primary}
-            />
-          </View>
-
-          {/* Options */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>OPTIONS</Text>
-            <View style={styles.optionRow}>
-              <Text style={styles.optionLabel}>Count-in</Text>
-              <Pressable
-                style={[styles.toggle, countInEnabled && styles.toggleActive]}
-                onPress={() => setCountInEnabled(!countInEnabled)}
-              >
-                <View
-                  style={[
-                    styles.toggleThumb,
-                    countInEnabled && styles.toggleThumbActive,
-                  ]}
+              {/* Volume */}
+              <View style={styles.section}>
+                <View style={styles.sliderHeader}>
+                  <Text style={styles.sectionLabel}>VOLUME</Text>
+                  <Text style={styles.sliderValue}>{Math.round(volume * 100)}%</Text>
+                </View>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={1}
+                  value={volume}
+                  onValueChange={setVolume}
+                  minimumTrackTintColor={colors.accent.primary}
+                  maximumTrackTintColor={colors.border.medium}
+                  thumbTintColor={colors.text.primary}
                 />
-              </Pressable>
-            </View>
-            <View style={styles.optionRow}>
-              <Text style={styles.optionLabel}>Silent Mode</Text>
-              <Pressable
-                style={[styles.toggle, muteAudio && styles.toggleActive]}
-                onPress={() => setMuteAudio(!muteAudio)}
-              >
-                <View
-                  style={[
-                    styles.toggleThumb,
-                    muteAudio && styles.toggleThumbActive,
-                  ]}
-                />
-              </Pressable>
-            </View>
-          </View>
+              </View>
 
-          {/* Accent Pattern */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>ACCENT</Text>
-            <View style={styles.chipRow}>
-              {[
-                { p: 0 as AccentPattern, label: 'First' },
-                { p: 1 as AccentPattern, label: 'All' },
-                { p: 2 as AccentPattern, label: 'Every 2' },
-                { p: 3 as AccentPattern, label: 'Every 3' },
-                { p: 4 as AccentPattern, label: 'Every 4' },
-              ].map((a) => (
-                <Pressable
-                  key={a.p}
-                  style={[
-                    styles.chip,
-                    accentPattern === a.p && styles.chipActive,
-                  ]}
-                  onPress={() => setAccentPattern(a.p)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      accentPattern === a.p && styles.chipTextActive,
-                    ]}
+              {/* Options */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>OPTIONS</Text>
+                <View style={styles.optionRow}>
+                  <Text style={styles.optionLabel}>Count-in (1 bar)</Text>
+                  <Pressable
+                    style={[styles.toggle, countInEnabled && styles.toggleActive]}
+                    onPress={() => setCountInEnabled(!countInEnabled)}
                   >
-                    {a.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+                    <View
+                      style={[
+                        styles.toggleThumb,
+                        countInEnabled && styles.toggleThumbActive,
+                      ]}
+                    />
+                  </Pressable>
+                </View>
+                <View style={styles.optionRow}>
+                  <View>
+                    <Text style={styles.optionLabel}>Silent Mode</Text>
+                    <Text style={styles.optionDesc}>Visual only, no audio</Text>
+                  </View>
+                  <Pressable
+                    style={[styles.toggle, muteAudio && styles.toggleActive]}
+                    onPress={() => setMuteAudio(!muteAudio)}
+                  >
+                    <View
+                      style={[
+                        styles.toggleThumb,
+                        muteAudio && styles.toggleThumbActive,
+                      ]}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+            </>
+          )}
+
+          {activeTab === 'bluetooth' && (
+            <BluetoothPanel bluetooth={bluetooth} />
+          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -357,11 +440,53 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.text.disabled,
   },
+
+  // Tabs
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: colors.accent.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.tertiary,
+  },
+  tabTextActive: {
+    color: colors.accent.primary,
+  },
+  tabBadge: {
+    backgroundColor: colors.accent.subtle,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.accent.primary,
+  },
+
   scroll: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
   },
 
   // Sections
@@ -449,6 +574,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  // Sound grid
+  soundGrid: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  soundCard: {
+    flex: 1,
+    backgroundColor: colors.bg.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  soundCardActive: {
+    backgroundColor: colors.accent.subtle,
+    borderColor: colors.accent.primary,
+  },
+  soundLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  soundLabelActive: {
+    color: colors.accent.primary,
+  },
+
   // Slider
   sliderHeader: {
     flexDirection: 'row',
@@ -477,6 +629,11 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 15,
     color: colors.text.secondary,
+  },
+  optionDesc: {
+    fontSize: 12,
+    color: colors.text.disabled,
+    marginTop: 2,
   },
   toggle: {
     width: 48,

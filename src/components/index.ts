@@ -1,6 +1,7 @@
 // 2026 Design Components
 export { BeatIndicator } from './BeatIndicator';
 export { SettingsDrawer } from './SettingsDrawer';
+export { BluetoothPanel } from './BluetoothPanel';
 
 // Legacy components (kept for reference)
 export { BeatRing } from './modern/BeatRing';
