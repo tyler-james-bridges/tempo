@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,7 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
 
-import { useMetronome, SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
+import { useMetronome } from '../hooks/useMetronome';
+import { getSubdivisionLabel } from '../utils/tempoMarkings';
 import { BeatRing } from '../components/modern/BeatRing';
 import { TempoDisplay } from '../components/modern/TempoDisplay';
 import { GlassPill } from '../components/modern/GlassPill';
@@ -34,6 +35,7 @@ export function MainScreen() {
     countInEnabled,
     isCountingIn,
     muteAudio,
+    isAccented,
     toggle,
     setTempo,
     setBeats,
@@ -51,9 +53,10 @@ export function MainScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTempoPicker, setShowTempoPicker] = useState(false);
 
+  // Track tempo for pan gesture - memoized to prevent recreation
   const lastTempoRef = useRef(tempo);
-  const panResponder = useRef(
-    PanResponder.create({
+  const panResponder = useMemo(
+    () => PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
@@ -67,18 +70,28 @@ export function MainScreen() {
         const newTempo = Math.round(lastTempoRef.current + delta);
         setTempo(newTempo);
       },
-    })
-  ).current;
+    }),
+    [tempo, setTempo]
+  );
 
   const handleTapTempo = useCallback(() => {
     tapTempo();
   }, [tapTempo]);
 
-  const shouldAccent = (beat: number) => {
-    if (accentPattern === 0) return beat === 1;
-    if (accentPattern === 1) return true;
-    return (beat - 1) % accentPattern === 0;
-  };
+  // Memoize beat rings to prevent recreation on every render
+  const beatRings = useMemo(() =>
+    Array.from({ length: beats }).map((_, i) => (
+      <BeatRing
+        key={i}
+        beatNumber={i + 1}
+        totalBeats={beats}
+        isActive={currentBeat === i + 1}
+        isAccent={isAccented(i + 1)}
+        isPlaying={isPlaying}
+      />
+    )),
+    [beats, currentBeat, isAccented, isPlaying]
+  );
 
   return (
     <View style={styles.container}>
@@ -89,7 +102,7 @@ export function MainScreen() {
       <View style={styles.gradientOrb2} />
       <View style={styles.gradientOrb3} />
 
-      <SafeAreaView style={styles.safeArea} {...panResponder.panHandlers}>
+      <SafeAreaView style={styles.safeArea} {...panResponder.panHandlers} accessibilityLabel="Tempo metronome main screen">
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>Tempo</Text>
@@ -99,6 +112,8 @@ export function MainScreen() {
               pressed && styles.buttonPressed,
             ]}
             onPress={() => setShowSettings(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
           >
             <View style={styles.settingsIcon}>
               <View style={styles.settingsDot} />
@@ -122,16 +137,7 @@ export function MainScreen() {
             <View style={styles.ringTrack} />
 
             <View style={styles.beatRingContainer}>
-              {Array.from({ length: beats }).map((_, i) => (
-                <BeatRing
-                  key={i}
-                  beatNumber={i + 1}
-                  totalBeats={beats}
-                  isActive={currentBeat === i + 1}
-                  isAccent={shouldAccent(i + 1)}
-                  isPlaying={isPlaying}
-                />
-              ))}
+              {beatRings}
 
               {isCountingIn ? (
                 <View style={styles.countInContainer}>
@@ -149,13 +155,15 @@ export function MainScreen() {
           </View>
 
           {/* Quick info pills */}
-          <View style={styles.infoPills}>
+          <View style={styles.infoPills} accessibilityRole="toolbar">
             <Pressable
               style={({ pressed }) => [
                 styles.infoPill,
                 pressed && styles.infoPillPressed,
               ]}
               onPress={() => setShowSettings(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Time signature: ${beats}/4. Tap to change`}
             >
               <Text style={styles.infoPillText}>{beats}/4</Text>
             </Pressable>
@@ -166,6 +174,8 @@ export function MainScreen() {
                 pressed && styles.infoPillPressed,
               ]}
               onPress={() => setShowSettings(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Subdivision: ${getSubdivisionLabel(subdivision)}. Tap to change`}
             >
               <Text style={[styles.infoPillText, styles.infoPillTextAccent]}>
                 {subdivision === 1 ? '♩' : subdivision === 2 ? '♪♪' : subdivision === 3 ? '♪³' : '♬'}
@@ -177,6 +187,8 @@ export function MainScreen() {
                 pressed && styles.infoPillPressed,
               ]}
               onPress={() => setShowSettings(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Sound: ${soundType}. Tap to change`}
             >
               <Text style={styles.infoPillText}>
                 {soundType.charAt(0).toUpperCase() + soundType.slice(1)}
@@ -188,7 +200,7 @@ export function MainScreen() {
         {/* Bottom Controls */}
         <View style={styles.bottomControls}>
           {/* Tempo adjustment buttons */}
-          <View style={styles.tempoControls}>
+          <View style={styles.tempoControls} accessibilityRole="toolbar" accessibilityLabel="Tempo adjustment">
             {[-5, -1, +1, +5].map((delta) => (
               <Pressable
                 key={delta}
@@ -197,6 +209,8 @@ export function MainScreen() {
                   pressed && styles.buttonPressed,
                 ]}
                 onPress={() => setTempo(tempo + delta)}
+                accessibilityRole="button"
+                accessibilityLabel={`${delta > 0 ? 'Increase' : 'Decrease'} tempo by ${Math.abs(delta)} BPM`}
               >
                 <Text style={styles.tempoAdjustText}>
                   {delta > 0 ? `+${delta}` : delta}
@@ -213,6 +227,9 @@ export function MainScreen() {
                 pressed && styles.buttonPressed,
               ]}
               onPress={handleTapTempo}
+              accessibilityRole="button"
+              accessibilityLabel="Tap tempo"
+              accessibilityHint="Tap repeatedly to set tempo"
             >
               <Text style={styles.sideButtonText}>TAP</Text>
             </Pressable>
@@ -229,6 +246,8 @@ export function MainScreen() {
                 pressed && styles.buttonPressed,
               ]}
               onPress={() => setShowSettings(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Edit settings"
             >
               <Text style={styles.sideButtonText}>EDIT</Text>
             </Pressable>
