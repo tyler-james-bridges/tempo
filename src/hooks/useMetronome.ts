@@ -1,10 +1,15 @@
 /**
- * Simple metronome using expo-av
- * Basic implementation that works in Expo Go
+ * High-precision metronome using react-native-audio-api
+ * Uses Web Audio API look-ahead scheduling for sample-accurate timing
+ *
+ * Based on Chris Wilson's "A Tale of Two Clocks" scheduling pattern:
+ * - setInterval runs every 25ms to check if notes need scheduling
+ * - Notes are scheduled 100ms ahead using audioContext.currentTime
+ * - Audio thread handles precise timing, immune to JS thread jitter
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Audio } from 'expo-av';
+import { AudioContext, OscillatorType } from 'react-native-audio-api';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -14,92 +19,49 @@ export type SoundType = 'click' | 'beep' | 'wood' | 'cowbell';
 export type SubdivisionType = 1 | 2 | 3 | 4;
 export type AccentPattern = 0 | 1 | 2 | 3 | 4;
 
-const SAMPLE_RATE = 44100;
+// Scheduling constants (from Chris Wilson's pattern)
+const LOOKAHEAD = 25.0;          // How often to call scheduler (ms)
+const SCHEDULE_AHEAD_TIME = 0.1; // How far ahead to schedule audio (seconds)
 
-// Generate different sounds based on type
-function generateSound(type: SoundType, isAccent: boolean, vol: number): string {
-  const duration = type === 'beep' ? 0.08 : type === 'cowbell' ? 0.12 : 0.05;
-  const numSamples = Math.floor(SAMPLE_RATE * duration);
-  const buffer = new Float32Array(numSamples);
-
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / SAMPLE_RATE;
-    let sample = 0;
-
-    switch (type) {
-      case 'click': {
-        // Sharp click: high frequency with fast decay
-        const freq = isAccent ? 1200 : 800;
-        const decay = Math.exp(-t * 60);
-        sample = Math.sin(2 * Math.PI * freq * t) * decay;
-        break;
-      }
-      case 'beep': {
-        // Pure tone beep: sine wave with softer envelope
-        const freq = isAccent ? 880 : 660;
-        const attack = Math.min(1, t * 100);
-        const decay = Math.exp(-t * 20);
-        sample = Math.sin(2 * Math.PI * freq * t) * attack * decay;
-        break;
-      }
-      case 'wood': {
-        // Woodblock: lower freq, band-pass character, quick decay
-        const freq = isAccent ? 400 : 320;
-        const decay = Math.exp(-t * 80);
-        const harmonic = Math.sin(2 * Math.PI * freq * 2.4 * t) * 0.3;
-        sample = (Math.sin(2 * Math.PI * freq * t) + harmonic) * decay;
-        break;
-      }
-      case 'cowbell': {
-        // Cowbell: two inharmonic frequencies
-        const f1 = isAccent ? 587 : 540;
-        const f2 = isAccent ? 845 : 800;
-        const decay = Math.exp(-t * 25);
-        sample = (Math.sin(2 * Math.PI * f1 * t) * 0.6 +
-                  Math.sin(2 * Math.PI * f2 * t) * 0.4) * decay;
-        break;
-      }
-    }
-    buffer[i] = sample * vol;
-  }
-
-  // Convert to WAV
-  const wavBuffer = new ArrayBuffer(44 + numSamples * 2);
-  const view = new DataView(wavBuffer);
-
-  // WAV header
-  const writeString = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  };
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + numSamples * 2, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, SAMPLE_RATE, true);
-  view.setUint32(28, SAMPLE_RATE * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, numSamples * 2, true);
-
-  for (let i = 0; i < numSamples; i++) {
-    view.setInt16(44 + i * 2, Math.floor(buffer[i] * 32767), true);
-  }
-
-  const bytes = new Uint8Array(wavBuffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-
-  return 'data:audio/wav;base64,' + btoa(binary);
+// Sound synthesis parameters for each sound type
+interface SoundParams {
+  accentFreq: number;
+  normalFreq: number;
+  decay: number;
+  duration: number;
+  type: OscillatorType;
 }
+
+const SOUND_PARAMS: Record<SoundType, SoundParams> = {
+  click: {
+    accentFreq: 1200,
+    normalFreq: 800,
+    decay: 60,
+    duration: 0.05,
+    type: 'sine',
+  },
+  beep: {
+    accentFreq: 880,
+    normalFreq: 660,
+    decay: 20,
+    duration: 0.08,
+    type: 'sine',
+  },
+  wood: {
+    accentFreq: 400,
+    normalFreq: 320,
+    decay: 80,
+    duration: 0.05,
+    type: 'triangle',
+  },
+  cowbell: {
+    accentFreq: 587,
+    normalFreq: 540,
+    decay: 25,
+    duration: 0.12,
+    type: 'square',
+  },
+};
 
 export function useMetronome() {
   const [tempo, setTempoState] = useState(120);
@@ -114,24 +76,52 @@ export function useMetronome() {
   const [isCountingIn, setIsCountingIn] = useState(false);
   const [muteAudio, setMuteAudioState] = useState(false);
 
-  // Sound refs - pool of 4 sounds for each type
-  const accentSoundsRef = useRef<Audio.Sound[]>([]);
-  const beatSoundsRef = useRef<Audio.Sound[]>([]);
-  const subSoundsRef = useRef<Audio.Sound[]>([]);
-  const soundIndexRef = useRef(0);
+  // Audio context ref
+  const audioContextRef = useRef<AudioContext | null>(null);
 
+  // Scheduler state refs
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentBeatRef = useRef(1);
-  const currentSubRef = useRef(1);
-  const countInBeatRef = useRef(0);
+  const nextNoteTimeRef = useRef(0);       // When the next note is due (in audioContext time)
+  const currentBeatRef = useRef(1);        // Current beat in the measure
+  const currentSubRef = useRef(1);         // Current subdivision within the beat
+  const countInBeatRef = useRef(0);        // Count-in beat counter
+
+  // State refs for callbacks
   const muteAudioRef = useRef(muteAudio);
+  const isCountingInRef = useRef(isCountingIn);
+  const tempoRef = useRef(tempo);
+  const beatsRef = useRef(beats);
+  const subdivisionRef = useRef(subdivision);
+  const volumeRef = useRef(volume);
+  const soundTypeRef = useRef(soundType);
+  const accentPatternRef = useRef(accentPattern);
+  const countInEnabledRef = useRef(countInEnabled);
+
+  // Keep refs in sync
   muteAudioRef.current = muteAudio;
+  isCountingInRef.current = isCountingIn;
+  tempoRef.current = tempo;
+  beatsRef.current = beats;
+  subdivisionRef.current = subdivision;
+  volumeRef.current = volume;
+  soundTypeRef.current = soundType;
+  accentPatternRef.current = accentPattern;
+  countInEnabledRef.current = countInEnabled;
 
   // Load settings on mount
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(s => {
+    AsyncStorage.getItem(STORAGE_KEY).then((s: string | null) => {
       if (s) {
-        const d = JSON.parse(s);
+        const d = JSON.parse(s) as {
+          tempo?: number;
+          beats?: number;
+          soundType?: SoundType;
+          subdivision?: SubdivisionType;
+          volume?: number;
+          accentPattern?: AccentPattern;
+          countInEnabled?: boolean;
+          muteAudio?: boolean;
+        };
         if (d.tempo) setTempoState(d.tempo);
         if (d.beats) setBeatsState(d.beats);
         if (d.soundType) setSoundTypeState(d.soundType);
@@ -151,201 +141,216 @@ export function useMetronome() {
     })).catch(() => {});
   }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio]);
 
-  // Initialize sounds - regenerate when soundType changes
+  // Initialize audio context
   useEffect(() => {
-    const initSounds = async () => {
-      // Unload existing sounds
-      await Promise.all([
-        ...accentSoundsRef.current.map(s => s.unloadAsync().catch(() => {})),
-        ...beatSoundsRef.current.map(s => s.unloadAsync().catch(() => {})),
-        ...subSoundsRef.current.map(s => s.unloadAsync().catch(() => {})),
-      ]);
-      accentSoundsRef.current = [];
-      beatSoundsRef.current = [];
-      subSoundsRef.current = [];
-
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-      });
-
-      // Generate sound URIs based on current sound type
-      const accentUri = generateSound(soundType, true, 1.0);
-      const beatUri = generateSound(soundType, false, 0.85);
-      const subUri = generateSound(soundType, false, 0.5);
-
-      // Create pool of 4 sounds for each type
-      const poolSize = 4;
-
-      for (let i = 0; i < poolSize; i++) {
-        const { sound: accent } = await Audio.Sound.createAsync(
-          { uri: accentUri },
-          { volume }
-        );
-        accentSoundsRef.current.push(accent);
-
-        const { sound: beat } = await Audio.Sound.createAsync(
-          { uri: beatUri },
-          { volume }
-        );
-        beatSoundsRef.current.push(beat);
-
-        const { sound: sub } = await Audio.Sound.createAsync(
-          { uri: subUri },
-          { volume: volume * 0.6 }
-        );
-        subSoundsRef.current.push(sub);
-      }
-    };
-
-    initSounds();
+    audioContextRef.current = new AudioContext();
 
     return () => {
-      accentSoundsRef.current.forEach(s => s.unloadAsync().catch(() => {}));
-      beatSoundsRef.current.forEach(s => s.unloadAsync().catch(() => {}));
-      subSoundsRef.current.forEach(s => s.unloadAsync().catch(() => {}));
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
     };
-  }, [soundType]);
-
-  // Update volume on all sounds
-  useEffect(() => {
-    accentSoundsRef.current.forEach(s => s.setVolumeAsync(volume).catch(() => {}));
-    beatSoundsRef.current.forEach(s => s.setVolumeAsync(volume).catch(() => {}));
-    subSoundsRef.current.forEach(s => s.setVolumeAsync(volume * 0.6).catch(() => {}));
-  }, [volume]);
+  }, []);
 
   const isAccented = useCallback((beat: number) => {
-    if (accentPattern === 0) return beat === 1;
-    if (accentPattern === 1) return true;
-    return (beat - 1) % accentPattern === 0;
-  }, [accentPattern]);
+    const pattern = accentPatternRef.current;
+    if (pattern === 0) return beat === 1;
+    if (pattern === 1) return true;
+    return (beat - 1) % pattern === 0;
+  }, []);
 
-  const playClick = useCallback(async (beat: number, sub: number, muted: boolean) => {
-    const idx = soundIndexRef.current;
-    soundIndexRef.current = (soundIndexRef.current + 1) % 4;
+  /**
+   * Schedule a single click/beep at a precise time using Web Audio
+   * Creates an oscillator with envelope for each note
+   */
+  const scheduleNote = useCallback((time: number, beat: number, sub: number, isCountIn: boolean) => {
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
 
-    let sound: Audio.Sound | undefined;
+    const muted = muteAudioRef.current;
+    const vol = volumeRef.current;
+    const type = soundTypeRef.current;
+    const params = SOUND_PARAMS[type];
 
-    if (sub === 1) {
-      if (isAccented(beat)) {
-        sound = accentSoundsRef.current[idx];
-      } else {
-        sound = beatSoundsRef.current[idx];
-      }
-      setCurrentBeat(beat);
-      Haptics.impactAsync(
-        isAccented(beat) ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium
-      );
-    } else {
-      sound = subSoundsRef.current[idx];
+    // Determine if this is a main beat or subdivision
+    const isMainBeat = sub === 1;
+    const accented = isCountIn || (isMainBeat && isAccented(beat));
+
+    // Update visual state on main beats (schedule this for the JS thread)
+    if (isMainBeat) {
+      const delay = Math.max(0, (time - ctx.currentTime) * 1000);
+      setTimeout(() => {
+        if (isCountIn) {
+          setCurrentBeat(beat - beatsRef.current - 1); // Negative countdown
+        } else {
+          setCurrentBeat(beat);
+        }
+        // Haptic feedback
+        Haptics.impactAsync(
+          accented ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium
+        );
+      }, delay);
     }
-
-    // Skip audio if muted (visual + haptics still work)
-    if (sound && !muted) {
-      try {
-        await sound.setPositionAsync(0);
-        await sound.playAsync();
-      } catch {
-        // Ignore errors
-      }
-    }
-  }, [isAccented]);
-
-  const tick = useCallback(() => {
-    playClick(currentBeatRef.current, currentSubRef.current, muteAudioRef.current);
-
-    currentSubRef.current++;
-    if (currentSubRef.current > subdivision) {
-      currentSubRef.current = 1;
-      currentBeatRef.current++;
-      if (currentBeatRef.current > beats) {
-        currentBeatRef.current = 1;
-      }
-    }
-  }, [playClick, subdivision, beats]);
-
-  const countInTick = useCallback(() => {
-    countInBeatRef.current++;
-
-    // Play accent sound for count-in and show negative beat numbers
-    const idx = soundIndexRef.current;
-    soundIndexRef.current = (soundIndexRef.current + 1) % 4;
-    const sound = accentSoundsRef.current[idx];
-
-    // Display as negative countdown: -4, -3, -2, -1
-    setCurrentBeat(countInBeatRef.current - beats - 1);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
     // Skip audio if muted
-    if (sound && !muteAudioRef.current) {
-      sound.setPositionAsync(0).then(() => sound.playAsync()).catch(() => {});
+    if (muted) return;
+
+    // Create oscillator and gain nodes for this note
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    // Set oscillator properties
+    const freq = accented ? params.accentFreq : params.normalFreq;
+    oscillator.type = params.type;
+    oscillator.frequency.setValueAtTime(freq, time);
+
+    // For cowbell, add a second oscillator for inharmonic sound
+    if (type === 'cowbell') {
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      const freq2 = accented ? 845 : 800;
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(freq2, time);
+
+      // Envelope for second oscillator
+      const attackEnd = time + 0.002;
+      const peakVol = vol * (accented ? 0.4 : 0.3) * (isMainBeat ? 1 : 0.5);
+      gain2.gain.setValueAtTime(0, time);
+      gain2.gain.linearRampToValueAtTime(peakVol, attackEnd);
+      gain2.gain.exponentialRampToValueAtTime(0.001, time + params.duration);
+
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(time);
+      osc2.stop(time + params.duration);
     }
 
-    // Check if count-in is complete
-    if (countInBeatRef.current >= beats) {
-      // Stop count-in timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+    // Create envelope: quick attack, exponential decay
+    const attackEnd = time + 0.002;
+    const peakVol = vol * (accented ? 1.0 : 0.85) * (isMainBeat ? 1 : 0.5);
+
+    gainNode.gain.setValueAtTime(0, time);
+    gainNode.gain.linearRampToValueAtTime(peakVol, attackEnd);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, time + params.duration);
+
+    // Connect and play
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    oscillator.start(time);
+    oscillator.stop(time + params.duration);
+  }, [isAccented]);
+
+  /**
+   * Advance to the next note in the sequence
+   * Updates beat/subdivision counters and calculates next note time
+   */
+  const advanceNote = useCallback(() => {
+    const secondsPerBeat = 60.0 / tempoRef.current;
+    const secondsPerSub = secondsPerBeat / subdivisionRef.current;
+
+    // Add the note duration to the next note time
+    if (isCountingInRef.current) {
+      // Count-in: only full beats, no subdivisions
+      nextNoteTimeRef.current += secondsPerBeat;
+    } else {
+      nextNoteTimeRef.current += secondsPerSub;
+    }
+
+    // Advance beat/subdivision counters
+    if (isCountingInRef.current) {
+      countInBeatRef.current++;
+
+      // Check if count-in is complete
+      if (countInBeatRef.current >= beatsRef.current) {
+        isCountingInRef.current = false;
+        setIsCountingIn(false);
+        currentBeatRef.current = 1;
+        currentSubRef.current = 1;
       }
-
-      // Transition to regular playback
-      setIsCountingIn(false);
-      currentBeatRef.current = 1;
-      currentSubRef.current = 1;
-
-      // Start regular tick after the beat interval
-      const msPerBeat = 60000 / tempo;
-      const msPerSub = msPerBeat / subdivision;
-
-      setTimeout(() => {
-        if (timerRef.current === null) return; // Was stopped during timeout
-        tick();
-        timerRef.current = setInterval(tick, msPerSub);
-      }, msPerSub);
-
-      // Set a marker so the timeout knows we're still going
-      timerRef.current = setTimeout(() => {}, 0) as unknown as ReturnType<typeof setInterval>;
+    } else {
+      currentSubRef.current++;
+      if (currentSubRef.current > subdivisionRef.current) {
+        currentSubRef.current = 1;
+        currentBeatRef.current++;
+        if (currentBeatRef.current > beatsRef.current) {
+          currentBeatRef.current = 1;
+        }
+      }
     }
-  }, [beats, tempo, subdivision, tick]);
+  }, []);
+
+  /**
+   * The scheduler - called by setInterval every LOOKAHEAD ms
+   * Schedules all notes that will be needed before the next interval
+   */
+  const scheduler = useCallback(() => {
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    // Schedule all notes that are due before the next scheduler call
+    while (nextNoteTimeRef.current < ctx.currentTime + SCHEDULE_AHEAD_TIME) {
+      if (isCountingInRef.current) {
+        scheduleNote(
+          nextNoteTimeRef.current,
+          countInBeatRef.current + 1,
+          1,
+          true
+        );
+      } else {
+        scheduleNote(
+          nextNoteTimeRef.current,
+          currentBeatRef.current,
+          currentSubRef.current,
+          false
+        );
+      }
+      advanceNote();
+    }
+  }, [scheduleNote, advanceNote]);
 
   const start = useCallback(() => {
     if (isPlaying || isCountingIn) return;
 
-    if (countInEnabled) {
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    // Resume context if suspended (required on some platforms)
+    if (ctx.state === 'suspended') {
+      // Context will auto-resume on first interaction
+    }
+
+    // Initialize timing
+    nextNoteTimeRef.current = ctx.currentTime;
+
+    if (countInEnabledRef.current) {
       // Start count-in
       countInBeatRef.current = 0;
+      isCountingInRef.current = true;
       setIsCountingIn(true);
       setIsPlaying(true);
-
-      // Play first count-in beat immediately
-      countInTick();
-
-      // Calculate interval (no subdivisions during count-in)
-      const msPerBeat = 60000 / tempo;
-      timerRef.current = setInterval(countInTick, msPerBeat);
     } else {
-      // Normal start without count-in
+      // Normal start
       currentBeatRef.current = 1;
       currentSubRef.current = 1;
+      isCountingInRef.current = false;
       setIsPlaying(true);
-
-      // Play first tick immediately
-      tick();
-
-      // Calculate interval
-      const msPerBeat = 60000 / tempo;
-      const msPerSub = msPerBeat / subdivision;
-
-      timerRef.current = setInterval(tick, msPerSub);
     }
-  }, [isPlaying, isCountingIn, countInEnabled, tempo, subdivision, tick, countInTick]);
+
+    // Start the scheduler
+    timerRef.current = setInterval(scheduler, LOOKAHEAD);
+
+    // Run scheduler immediately for first notes
+    scheduler();
+  }, [isPlaying, isCountingIn, scheduler]);
 
   const stop = useCallback(() => {
     if (!isPlaying) return;
 
     setIsPlaying(false);
     setIsCountingIn(false);
+    isCountingInRef.current = false;
     setCurrentBeat(0);
 
     if (timerRef.current) {
@@ -353,16 +358,6 @@ export function useMetronome() {
       timerRef.current = null;
     }
   }, [isPlaying]);
-
-  // Restart if tempo/subdivision changes while playing
-  useEffect(() => {
-    if (isPlaying && timerRef.current) {
-      clearInterval(timerRef.current);
-      const msPerBeat = 60000 / tempo;
-      const msPerSub = msPerBeat / subdivision;
-      timerRef.current = setInterval(tick, msPerSub);
-    }
-  }, [tempo, subdivision, isPlaying, tick]);
 
   const toggle = useCallback(() => {
     if (isPlaying) {
@@ -410,6 +405,7 @@ export function useMetronome() {
     const now = Date.now();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    // Reset if more than 2 seconds since last tap
     if (tapTimes.current.length && now - tapTimes.current[tapTimes.current.length - 1] > 2000) {
       tapTimes.current = [];
     }
@@ -418,11 +414,14 @@ export function useMetronome() {
     if (tapTimes.current.length > 5) tapTimes.current.shift();
 
     if (tapTimes.current.length >= 2) {
-      let sum = 0;
+      // Use median instead of mean for more robust averaging
+      const intervals: number[] = [];
       for (let i = 1; i < tapTimes.current.length; i++) {
-        sum += tapTimes.current[i] - tapTimes.current[i - 1];
+        intervals.push(tapTimes.current[i] - tapTimes.current[i - 1]);
       }
-      setTempo(Math.round(60000 / (sum / (tapTimes.current.length - 1))));
+      intervals.sort((a, b) => a - b);
+      const median = intervals[Math.floor(intervals.length / 2)];
+      setTempo(Math.round(60000 / median));
     }
   }, [setTempo]);
 
