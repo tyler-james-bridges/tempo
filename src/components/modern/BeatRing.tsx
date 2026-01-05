@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 
 interface BeatRingProps {
@@ -9,7 +9,7 @@ interface BeatRingProps {
   isPlaying: boolean;
 }
 
-export function BeatRing({ beatNumber, totalBeats, isActive, isAccent, isPlaying }: BeatRingProps) {
+export const BeatRing = memo(function BeatRing({ beatNumber, totalBeats, isActive, isAccent, isPlaying }: BeatRingProps) {
   // Calculate position around a circle
   const angle = ((beatNumber - 1) / totalBeats) * 2 * Math.PI - Math.PI / 2;
   const radius = 110;
@@ -44,7 +44,7 @@ export function BeatRing({ beatNumber, totalBeats, isActive, isAccent, isPlaying
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   beatDot: {

@@ -110,44 +110,65 @@ export function useMetronome() {
 
   // Load settings on mount
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((s: string | null) => {
-      if (s) {
-        const d = JSON.parse(s) as {
-          tempo?: number;
-          beats?: number;
-          soundType?: SoundType;
-          subdivision?: SubdivisionType;
-          volume?: number;
-          accentPattern?: AccentPattern;
-          countInEnabled?: boolean;
-          muteAudio?: boolean;
-        };
-        if (d.tempo) setTempoState(d.tempo);
-        if (d.beats) setBeatsState(d.beats);
-        if (d.soundType) setSoundTypeState(d.soundType);
-        if (d.subdivision) setSubdivisionState(d.subdivision);
-        if (d.volume !== undefined) setVolumeState(d.volume);
-        if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
-        if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
-        if (d.muteAudio !== undefined) setMuteAudioState(d.muteAudio);
-      }
-    }).catch(() => {});
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((s: string | null) => {
+        if (s) {
+          try {
+            const d = JSON.parse(s) as {
+              tempo?: number;
+              beats?: number;
+              soundType?: SoundType;
+              subdivision?: SubdivisionType;
+              volume?: number;
+              accentPattern?: AccentPattern;
+              countInEnabled?: boolean;
+              muteAudio?: boolean;
+            };
+            if (d.tempo) setTempoState(d.tempo);
+            if (d.beats) setBeatsState(d.beats);
+            if (d.soundType) setSoundTypeState(d.soundType);
+            if (d.subdivision) setSubdivisionState(d.subdivision);
+            if (d.volume !== undefined) setVolumeState(d.volume);
+            if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
+            if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
+            if (d.muteAudio !== undefined) setMuteAudioState(d.muteAudio);
+          } catch (parseError) {
+            console.warn('Failed to parse metronome settings:', parseError);
+            // Clear corrupted data
+            AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+          }
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load metronome settings:', error);
+      });
   }, []);
 
   // Save settings
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
       tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio
-    })).catch(() => {});
+    })).catch((error) => {
+      console.warn('Failed to save metronome settings:', error);
+    });
   }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio]);
 
-  // Initialize audio context
+  // Initialize audio context with fallback for unsupported devices
   useEffect(() => {
-    audioContextRef.current = new AudioContext();
+    try {
+      audioContextRef.current = new AudioContext();
+    } catch (error) {
+      console.warn('AudioContext not available, audio will be disabled:', error);
+      audioContextRef.current = null;
+    }
 
     return () => {
       if (audioContextRef.current) {
-        audioContextRef.current.close();
+        try {
+          audioContextRef.current.close();
+        } catch (error) {
+          console.warn('Error closing AudioContext:', error);
+        }
         audioContextRef.current = null;
       }
     };
@@ -445,6 +466,7 @@ export function useMetronome() {
     countInEnabled,
     isCountingIn,
     muteAudio,
+    isAccented,
     toggle,
     start,
     stop,

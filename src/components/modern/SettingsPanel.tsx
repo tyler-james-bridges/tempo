@@ -30,11 +30,11 @@ const SOUND_OPTIONS: { type: SoundType; label: string; icon: string }[] = [
   { type: 'cowbell', label: 'Bell', icon: '' },
 ];
 
-const SUBDIVISION_OPTIONS: { type: SubdivisionType; label: string }[] = [
-  { type: 1, label: '1/4' },
-  { type: 2, label: '1/8' },
-  { type: 3, label: 'Triplet' },
-  { type: 4, label: '1/16' },
+const SUBDIVISION_OPTIONS: { type: SubdivisionType; label: string; accessibilityLabel: string }[] = [
+  { type: 1, label: 'Quarter', accessibilityLabel: 'Quarter notes - 1 per beat' },
+  { type: 2, label: 'Eighth', accessibilityLabel: 'Eighth notes - 2 per beat' },
+  { type: 3, label: 'Triplet', accessibilityLabel: 'Triplets - 3 per beat' },
+  { type: 4, label: '16th', accessibilityLabel: 'Sixteenth notes - 4 per beat' },
 ];
 
 const ACCENT_OPTIONS: { type: AccentPattern; label: string }[] = [
@@ -186,7 +186,7 @@ export function SettingsPanel({
             </View>
           </View>
 
-          {/* Visual Only Mode */}
+          {/* Silent Mode */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Audio</Text>
             <View style={styles.optionRow}>
@@ -197,12 +197,15 @@ export function SettingsPanel({
                 accentColor="#3B82F6"
               />
               <GlassPill
-                label="Visual Only"
+                label="Silent Mode"
                 isActive={muteAudio}
                 onPress={() => setMuteAudio(true)}
                 accentColor="#8B5CF6"
               />
             </View>
+            {muteAudio && (
+              <Text style={styles.modeHint}>Visual beat indicator only - no sound</Text>
+            )}
           </View>
 
           {/* Volume */}
@@ -297,5 +300,11 @@ const styles = StyleSheet.create({
   },
   volumeSlider: {
     height: 40,
+  },
+  modeHint: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

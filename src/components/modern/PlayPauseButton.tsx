@@ -45,6 +45,9 @@ export function PlayPauseButton({ isPlaying, onPress, size = 80 }: PlayPauseButt
           },
           isPlaying && styles.buttonPlaying,
         ]}
+        accessibilityRole="button"
+        accessibilityLabel={isPlaying ? 'Stop metronome' : 'Start metronome'}
+        accessibilityState={{ selected: isPlaying }}
       >
         {isPlaying ? (
           <View

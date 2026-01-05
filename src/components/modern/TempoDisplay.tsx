@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { getTempoMarking } from '../../utils/tempoMarkings';
 
 interface TempoDisplayProps {
   tempo: number;
@@ -8,21 +9,14 @@ interface TempoDisplayProps {
 }
 
 export function TempoDisplay({ tempo, isPlaying, onPress }: TempoDisplayProps) {
-  const getTempoMarking = (bpm: number): string => {
-    if (bpm < 40) return 'Grave';
-    if (bpm < 60) return 'Largo';
-    if (bpm < 66) return 'Larghetto';
-    if (bpm < 76) return 'Adagio';
-    if (bpm < 108) return 'Andante';
-    if (bpm < 120) return 'Moderato';
-    if (bpm < 156) return 'Allegro';
-    if (bpm < 176) return 'Vivace';
-    if (bpm < 200) return 'Presto';
-    return 'Prestissimo';
-  };
-
   return (
-    <Pressable onPress={onPress} style={styles.container}>
+    <Pressable
+      onPress={onPress}
+      style={styles.container}
+      accessibilityRole="button"
+      accessibilityLabel={`Tempo: ${tempo} BPM, ${getTempoMarking(tempo)}. Tap to adjust`}
+      accessibilityHint="Opens tempo adjustment dialog"
+    >
       <View style={styles.tempoContainer}>
         <Text style={styles.tempoValue}>{tempo}</Text>
         <Text style={styles.bpmLabel}>BPM</Text>

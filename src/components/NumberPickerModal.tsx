@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,23 +10,9 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
+import { getTempoMarking } from '../utils/tempoMarkings';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Tempo markings based on traditional Italian terms
-const getTempoMarking = (tempo: number): string => {
-  if (tempo < 40) return 'Grave';
-  if (tempo < 55) return 'Largo';
-  if (tempo < 66) return 'Larghetto';
-  if (tempo < 76) return 'Adagio';
-  if (tempo < 92) return 'Andante';
-  if (tempo < 108) return 'Moderato';
-  if (tempo < 120) return 'Allegretto';
-  if (tempo < 140) return 'Allegro';
-  if (tempo < 168) return 'Vivace';
-  if (tempo < 200) return 'Presto';
-  return 'Prestissimo';
-};
 
 // Common tempo presets - warm gold/amber gradient
 const TEMPO_PRESETS = [
@@ -123,9 +109,9 @@ export function NumberPickerModal({
     ]).start();
   }, [clampValue]);
 
-  // Pan responder for vertical swipe
-  const panResponder = useRef(
-    PanResponder.create({
+  // Pan responder for vertical swipe - memoized to prevent recreation
+  const panResponder = useMemo(
+    () => PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         return Math.abs(gestureState.dy) > 5;
@@ -152,8 +138,9 @@ export function NumberPickerModal({
           setCurrentValue(prev => clampValue(prev + momentum));
         }
       },
-    })
-  ).current;
+    }),
+    [clampValue]
+  );
 
   const startHold = useCallback((delta: number) => {
     adjustValue(delta);
