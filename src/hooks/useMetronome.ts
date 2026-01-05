@@ -83,6 +83,8 @@ export function useMetronome() {
   const [countInEnabled, setCountInEnabledState] = useState(false);
   const [isCountingIn, setIsCountingIn] = useState(false);
   const [muteAudio, setMuteAudioState] = useState(false);
+  // Haptic feedback - disabled by default, user can enable in settings
+  const [hapticsEnabled, setHapticsEnabledState] = useState(false);
   // Bluetooth/audio latency compensation in milliseconds
   // Audio is scheduled earlier by this amount so it arrives on time through BT speakers
   const [audioLatency, setAudioLatencyState] = useState(0);
@@ -99,6 +101,7 @@ export function useMetronome() {
 
   // State refs for callbacks
   const muteAudioRef = useRef(muteAudio);
+  const hapticsEnabledRef = useRef(hapticsEnabled);
   const isCountingInRef = useRef(isCountingIn);
   const tempoRef = useRef(tempo);
   const beatsRef = useRef(beats);
@@ -111,6 +114,7 @@ export function useMetronome() {
 
   // Keep refs in sync
   muteAudioRef.current = muteAudio;
+  hapticsEnabledRef.current = hapticsEnabled;
   audioLatencyRef.current = audioLatency;
   isCountingInRef.current = isCountingIn;
   tempoRef.current = tempo;
@@ -136,6 +140,7 @@ export function useMetronome() {
               accentPattern?: AccentPattern;
               countInEnabled?: boolean;
               muteAudio?: boolean;
+              hapticsEnabled?: boolean;
               audioLatency?: number;
             };
             if (d.tempo) setTempoState(d.tempo);
@@ -146,6 +151,7 @@ export function useMetronome() {
             if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
             if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
             if (d.muteAudio !== undefined) setMuteAudioState(d.muteAudio);
+            if (d.hapticsEnabled !== undefined) setHapticsEnabledState(d.hapticsEnabled);
             if (d.audioLatency !== undefined) setAudioLatencyState(d.audioLatency);
           } catch (parseError) {
             console.warn('Failed to parse metronome settings:', parseError);
@@ -162,11 +168,11 @@ export function useMetronome() {
   // Save settings
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, audioLatency
+      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, hapticsEnabled, audioLatency
     })).catch((error) => {
       console.warn('Failed to save metronome settings:', error);
     });
-  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, audioLatency]);
+  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, hapticsEnabled, audioLatency]);
 
   // Initialize audio context with fallback for unsupported devices
   useEffect(() => {
@@ -232,10 +238,12 @@ export function useMetronome() {
         } else {
           setCurrentBeat(beat);
         }
-        // Haptic feedback
-        Haptics.impactAsync(
-          accented ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium
-        );
+        // Haptic feedback (only if enabled)
+        if (hapticsEnabledRef.current) {
+          Haptics.impactAsync(
+            accented ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium
+          );
+        }
       }, delay);
     }
 
@@ -487,6 +495,10 @@ export function useMetronome() {
     setMuteAudioState(muted);
   }, []);
 
+  const setHapticsEnabled = useCallback((enabled: boolean) => {
+    setHapticsEnabledState(enabled);
+  }, []);
+
   // Bluetooth/audio output latency compensation (0-500ms)
   const setAudioLatency = useCallback((latency: number) => {
     setAudioLatencyState(Math.max(0, Math.min(500, Math.round(latency))));
@@ -535,7 +547,9 @@ export function useMetronome() {
       // Only record reasonable latencies (0-600ms)
       if (latencyMs >= 0 && latencyMs <= 600) {
         calibrationTapsRef.current.push({ scheduled, tapped: now });
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (hapticsEnabledRef.current) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
       }
     }
   }, [isCalibrating]);
@@ -594,7 +608,9 @@ export function useMetronome() {
   const tapTimes = useRef<number[]>([]);
   const tapTempo = useCallback(() => {
     const now = Date.now();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (hapticsEnabledRef.current) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
 
     // Reset if more than 2 seconds since last tap
     if (tapTimes.current.length && now - tapTimes.current[tapTimes.current.length - 1] > 2000) {
@@ -636,6 +652,7 @@ export function useMetronome() {
     countInEnabled,
     isCountingIn,
     muteAudio,
+    hapticsEnabled,
     audioLatency,
     isCalibrating,
     calibrationTapCount: calibrationTapsRef.current.length,
@@ -651,6 +668,7 @@ export function useMetronome() {
     setAccentPattern,
     setCountInEnabled,
     setMuteAudio,
+    setHapticsEnabled,
     setAudioLatency,
     startCalibration,
     stopCalibration,
