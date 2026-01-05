@@ -11,7 +11,6 @@ import {
 import Slider from '@react-native-community/slider';
 import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS, DRUMLINE_PRESETS, SHOW_PRESETS } from '../constants/theme';
 import { SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
-import { useBluetoothAudio } from '../hooks/useBluetoothAudio';
 import { useSetlist } from '../hooks/useSetlist';
 import { BluetoothPanel } from './BluetoothPanel';
 import { SetlistPanel } from './SetlistPanel';
@@ -38,13 +37,22 @@ interface SettingsDrawerProps {
   muteAudio: boolean;
   setMuteAudio: (m: boolean) => void;
   tapTempo: () => void;
+  // Audio latency / Bluetooth compensation
+  audioLatency: number;
+  setAudioLatency: (ms: number) => void;
+  isCalibrating: boolean;
+  calibrationTapCount: number;
+  startCalibration: () => void;
+  stopCalibration: (applyResult?: boolean) => void;
+  calibrationTap: () => void;
+  getCalibrationResult: () => number | null;
 }
 
-const SOUNDS: { type: SoundType; label: string }[] = [
-  { type: 'click', label: 'Click' },
-  { type: 'beep', label: 'Beep' },
-  { type: 'wood', label: 'Wood' },
-  { type: 'cowbell', label: 'Bell' },
+const SOUNDS: { type: SoundType; label: string; desc: string }[] = [
+  { type: 'click', label: 'Click', desc: 'Classic' },
+  { type: 'beep', label: 'Beep', desc: 'Digital' },
+  { type: 'wood', label: 'Wood', desc: 'Natural' },
+  { type: 'cowbell', label: 'Bell', desc: 'Bright' },
 ];
 
 type Tab = 'tempo' | 'sound' | 'setlist' | 'bluetooth';
@@ -69,12 +77,19 @@ export function SettingsDrawer({
   muteAudio,
   setMuteAudio,
   tapTempo,
+  audioLatency,
+  setAudioLatency,
+  isCalibrating,
+  calibrationTapCount,
+  startCalibration,
+  stopCalibration,
+  calibrationTap,
+  getCalibrationResult,
 }: SettingsDrawerProps) {
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState<Tab>('tempo');
 
-  const bluetooth = useBluetoothAudio();
   const setlistManager = useSetlist();
 
   useEffect(() => {
@@ -131,6 +146,9 @@ export function SettingsDrawer({
           <Pressable
             style={[styles.tab, activeTab === 'tempo' && styles.tabActive]}
             onPress={() => setActiveTab('tempo')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'tempo' }}
+            accessibilityLabel="Tempo settings"
           >
             <Text style={[styles.tabText, activeTab === 'tempo' && styles.tabTextActive]}>
               Tempo
@@ -139,6 +157,9 @@ export function SettingsDrawer({
           <Pressable
             style={[styles.tab, activeTab === 'sound' && styles.tabActive]}
             onPress={() => setActiveTab('sound')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'sound' }}
+            accessibilityLabel="Sound settings"
           >
             <Text style={[styles.tabText, activeTab === 'sound' && styles.tabTextActive]}>
               Sound
@@ -147,6 +168,9 @@ export function SettingsDrawer({
           <Pressable
             style={[styles.tab, activeTab === 'setlist' && styles.tabActive]}
             onPress={() => setActiveTab('setlist')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'setlist' }}
+            accessibilityLabel="Setlist management"
           >
             <Text style={[styles.tabText, activeTab === 'setlist' && styles.tabTextActive]}>
               Setlist
@@ -162,15 +186,19 @@ export function SettingsDrawer({
           <Pressable
             style={[styles.tab, activeTab === 'bluetooth' && styles.tabActive]}
             onPress={() => setActiveTab('bluetooth')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'bluetooth' }}
+            accessibilityLabel="Audio output settings"
           >
             <Text style={[styles.tabText, activeTab === 'bluetooth' && styles.tabTextActive]}>
               Output
             </Text>
-            {bluetooth.settings.devicePreset !== 'wired' && (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>
-                  {bluetooth.settings.latencyCompensation}ms
+            {audioLatency > 0 && (
+              <View style={styles.latencyBadge}>
+                <Text style={styles.latencyBadgeValue}>
+                  {audioLatency}
                 </Text>
+                <Text style={styles.latencyBadgeUnit}>ms</Text>
               </View>
             )}
           </Pressable>
@@ -350,6 +378,9 @@ export function SettingsDrawer({
                         soundType === s.type && styles.soundCardActive,
                       ]}
                       onPress={() => setSoundType(s.type)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: soundType === s.type }}
+                      accessibilityLabel={`${s.label} sound, ${s.desc}`}
                     >
                       <Text
                         style={[
@@ -358,6 +389,14 @@ export function SettingsDrawer({
                         ]}
                       >
                         {s.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.soundDesc,
+                          soundType === s.type && styles.soundDescActive,
+                        ]}
+                      >
+                        {s.desc}
                       </Text>
                     </Pressable>
                   ))}
@@ -370,50 +409,69 @@ export function SettingsDrawer({
                   <Text style={styles.sectionLabel}>VOLUME</Text>
                   <Text style={styles.sliderValue}>{Math.round(volume * 100)}%</Text>
                 </View>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={0}
-                  maximumValue={1}
-                  value={volume}
-                  onValueChange={setVolume}
-                  minimumTrackTintColor={colors.accent.primary}
-                  maximumTrackTintColor={colors.border.medium}
-                  thumbTintColor={colors.text.primary}
-                />
+                <View style={styles.sliderContainer}>
+                  <Slider
+                    style={styles.slider}
+                    minimumValue={0}
+                    maximumValue={1}
+                    value={volume}
+                    onValueChange={setVolume}
+                    minimumTrackTintColor={colors.accent.primary}
+                    maximumTrackTintColor={colors.border.medium}
+                    thumbTintColor={colors.text.primary}
+                    accessibilityLabel={`Volume ${Math.round(volume * 100)} percent`}
+                  />
+                </View>
               </View>
 
               {/* Options */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>OPTIONS</Text>
-                <View style={styles.optionRow}>
-                  <Text style={styles.optionLabel}>Count-in (1 bar)</Text>
+                <View style={styles.optionsCard}>
                   <Pressable
-                    style={[styles.toggle, countInEnabled && styles.toggleActive]}
+                    style={styles.optionRow}
                     onPress={() => setCountInEnabled(!countInEnabled)}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: countInEnabled }}
+                    accessibilityLabel="Count-in one bar before starting"
                   >
+                    <View style={styles.optionContent}>
+                      <Text style={styles.optionLabel}>Count-in</Text>
+                      <Text style={styles.optionDesc}>One bar before starting</Text>
+                    </View>
                     <View
-                      style={[
-                        styles.toggleThumb,
-                        countInEnabled && styles.toggleThumbActive,
-                      ]}
-                    />
+                      style={[styles.toggle, countInEnabled && styles.toggleActive]}
+                    >
+                      <View
+                        style={[
+                          styles.toggleThumb,
+                          countInEnabled && styles.toggleThumbActive,
+                        ]}
+                      />
+                    </View>
                   </Pressable>
-                </View>
-                <View style={styles.optionRow}>
-                  <View>
-                    <Text style={styles.optionLabel}>Silent Mode</Text>
-                    <Text style={styles.optionDesc}>Visual only, no audio</Text>
-                  </View>
+                  <View style={styles.optionDivider} />
                   <Pressable
-                    style={[styles.toggle, muteAudio && styles.toggleActive]}
+                    style={styles.optionRow}
                     onPress={() => setMuteAudio(!muteAudio)}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: muteAudio }}
+                    accessibilityLabel="Silent mode, visual only without audio"
                   >
+                    <View style={styles.optionContent}>
+                      <Text style={styles.optionLabel}>Silent Mode</Text>
+                      <Text style={styles.optionDesc}>Visual only, no audio</Text>
+                    </View>
                     <View
-                      style={[
-                        styles.toggleThumb,
-                        muteAudio && styles.toggleThumbActive,
-                      ]}
-                    />
+                      style={[styles.toggle, muteAudio && styles.toggleActive]}
+                    >
+                      <View
+                        style={[
+                          styles.toggleThumb,
+                          muteAudio && styles.toggleThumbActive,
+                        ]}
+                      />
+                    </View>
                   </Pressable>
                 </View>
               </View>
@@ -431,7 +489,16 @@ export function SettingsDrawer({
           )}
 
           {activeTab === 'bluetooth' && (
-            <BluetoothPanel bluetooth={bluetooth} />
+            <BluetoothPanel
+              audioLatency={audioLatency}
+              setAudioLatency={setAudioLatency}
+              isCalibrating={isCalibrating}
+              calibrationTapCount={calibrationTapCount}
+              startCalibration={startCalibration}
+              stopCalibration={stopCalibration}
+              calibrationTap={calibrationTap}
+              getCalibrationResult={getCalibrationResult}
+            />
           )}
 
           <View style={{ height: 40 }} />
@@ -444,7 +511,7 @@ export function SettingsDrawer({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
   },
   drawer: {
     position: 'absolute',
@@ -463,16 +530,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+    width: 40,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: colors.text.disabled,
   },
 
-  // Tabs
+  // Tabs - increased touch targets
   tabBar: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.subtle,
   },
@@ -482,31 +549,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 2,
+    paddingVertical: spacing.md + 2, // 18px for better touch target
+    minHeight: 48, // iOS minimum touch target
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
   tabActive: {
     borderBottomColor: colors.accent.primary,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.tertiary,
+    letterSpacing: 0.2,
   },
   tabTextActive: {
     color: colors.accent.primary,
   },
   tabBadge: {
     backgroundColor: colors.accent.subtle,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginLeft: 2,
   },
   tabBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: colors.accent.primary,
+  },
+  // Latency badge - designed for clean ms value display
+  latencyBadge: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    backgroundColor: colors.accent.subtle,
+    paddingLeft: 8,
+    paddingRight: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginLeft: 2,
+    minWidth: 48,
+    justifyContent: 'center',
+  },
+  latencyBadgeValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.accent.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  latencyBadgeUnit: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.accent.dim,
+    marginLeft: 1,
   },
 
   scroll: {
@@ -514,176 +609,228 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
 
-  // Sections
+  // Sections - increased spacing for visual hierarchy
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   sectionLabel: {
     ...font.label,
+    fontSize: 13,
     color: colors.text.tertiary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    letterSpacing: 1.5,
   },
 
-  // Preset chips
+  // Preset chips - larger touch targets
   presetRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.sm + 2, // 10px gap
   },
   presetChip: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 4, // 20px vertical padding
     paddingHorizontal: spacing.sm,
     backgroundColor: colors.bg.surface,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border.subtle,
     alignItems: 'center',
+    minHeight: 64, // Ensure adequate touch target
   },
   presetChipActive: {
     backgroundColor: colors.accent.subtle,
     borderColor: colors.accent.primary,
   },
   presetBpm: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.text.secondary,
   },
   presetName: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '500',
     color: colors.text.disabled,
-    marginTop: 2,
+    marginTop: 4,
+    letterSpacing: 0.3,
   },
   presetTextActive: {
     color: colors.accent.primary,
   },
 
-  // Tap tempo
+  // Tap tempo - prominent button
   tapButton: {
     backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 2,
     borderColor: colors.border.medium,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xl,
     alignItems: 'center',
+    minHeight: 56,
   },
   tapButtonText: {
     ...font.label,
+    fontSize: 14,
     color: colors.text.secondary,
+    letterSpacing: 2,
   },
 
-  // Chips
+  // Chips - improved touch targets and spacing
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.sm + 2, // 10px gap
   },
   chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md - 2, // 14px
+    paddingHorizontal: spacing.lg - 4, // 20px
     backgroundColor: colors.bg.surface,
     borderRadius: radius.pill,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border.subtle,
+    minHeight: 44, // iOS minimum touch target
+    justifyContent: 'center',
   },
   chipActive: {
     backgroundColor: colors.accent.subtle,
     borderColor: colors.accent.primary,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
     color: colors.text.secondary,
   },
   chipTextActive: {
     color: colors.accent.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
-  // Sound grid
+  // Sound grid - larger cards with descriptions
   soundGrid: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
   soundCard: {
-    flex: 1,
+    width: '47%',
     backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     borderColor: colors.border.subtle,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
+    minHeight: 80,
+    justifyContent: 'center',
   },
   soundCardActive: {
     backgroundColor: colors.accent.subtle,
     borderColor: colors.accent.primary,
+    borderWidth: 2,
   },
   soundLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text.secondary,
+    marginBottom: 4,
   },
   soundLabelActive: {
     color: colors.accent.primary,
   },
+  soundDesc: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.text.disabled,
+  },
+  soundDescActive: {
+    color: colors.accent.dim,
+  },
 
-  // Slider
+  // Slider - contained in a visible track
   sliderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   sliderValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.accent.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  sliderContainer: {
+    backgroundColor: colors.bg.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   slider: {
-    height: 40,
+    height: 44, // Adequate touch target
   },
 
-  // Options
+  // Options card - grouped options with consistent spacing
+  optionsCard: {
+    backgroundColor: colors.bg.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    overflow: 'hidden',
+  },
   optionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    minHeight: 72, // Good touch target height
+  },
+  optionContent: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  optionDivider: {
+    height: 1,
+    backgroundColor: colors.border.subtle,
+    marginHorizontal: spacing.lg,
   },
   optionLabel: {
-    fontSize: 15,
-    color: colors.text.secondary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
   },
   optionDesc: {
-    fontSize: 12,
-    color: colors.text.disabled,
-    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '400',
+    color: colors.text.tertiary,
+    lineHeight: 18,
   },
   toggle: {
-    width: 48,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.bg.surface,
-    borderWidth: 1,
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.bg.primary,
+    borderWidth: 1.5,
     borderColor: colors.border.medium,
-    padding: 2,
+    padding: 3,
+    justifyContent: 'center',
   },
   toggleActive: {
     backgroundColor: colors.accent.primary,
     borderColor: colors.accent.primary,
   },
   toggleThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: colors.text.tertiary,
   },
   toggleThumbActive: {
     backgroundColor: colors.text.primary,
-    marginLeft: 'auto',
+    alignSelf: 'flex-end',
   },
 });

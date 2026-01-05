@@ -28,7 +28,8 @@ export type AccentPattern = 0 | 1 | 2 | 3 | 4;
 
 // Scheduling constants (from Chris Wilson's pattern)
 const LOOKAHEAD = 25.0;          // How often to call scheduler (ms)
-const SCHEDULE_AHEAD_TIME = 0.1; // How far ahead to schedule audio (seconds)
+const SCHEDULE_AHEAD_TIME = 0.15; // How far ahead to schedule audio (seconds)
+const MAX_LATENCY_COMPENSATION = 0.5; // Maximum latency compensation (500ms)
 
 // Sound synthesis parameters for each sound type
 interface SoundParams {
@@ -44,28 +45,28 @@ const SOUND_PARAMS: Record<SoundType, SoundParams> = {
     accentFreq: 1200,
     normalFreq: 800,
     decay: 60,
-    duration: 0.05,
+    duration: 0.03,  // Shortened to prevent overlap at fast tempos
     type: 'sine',
   },
   beep: {
     accentFreq: 880,
     normalFreq: 660,
     decay: 20,
-    duration: 0.08,
+    duration: 0.04,  // Shortened to prevent overlap at fast tempos
     type: 'sine',
   },
   wood: {
     accentFreq: 400,
     normalFreq: 320,
     decay: 80,
-    duration: 0.05,
+    duration: 0.03,  // Shortened to prevent overlap at fast tempos
     type: 'triangle',
   },
   cowbell: {
     accentFreq: 587,
     normalFreq: 540,
     decay: 25,
-    duration: 0.12,
+    duration: 0.05,  // Shortened from 0.12 - was causing overlap at fast tempos
     type: 'square',
   },
 };
@@ -244,7 +245,9 @@ export function useMetronome() {
     // BLUETOOTH LATENCY COMPENSATION:
     // Schedule audio EARLIER by the latency amount so it arrives through BT on time
     // This is the key to making Bluetooth speakers work correctly
-    const audioTime = Math.max(ctx.currentTime, time - latencyCompensation);
+    // We add a small buffer (5ms) to ensure we never schedule in the past
+    const minAudioTime = ctx.currentTime + 0.005;
+    const audioTime = Math.max(minAudioTime, time - latencyCompensation);
 
     // Create oscillator and gain nodes for this note
     const oscillator = ctx.createOscillator();
@@ -334,13 +337,20 @@ export function useMetronome() {
   /**
    * The scheduler - called by setInterval every LOOKAHEAD ms
    * Schedules all notes that will be needed before the next interval
+   *
+   * IMPORTANT: We look ahead by SCHEDULE_AHEAD_TIME + latency compensation
+   * to ensure audio can be scheduled early enough for Bluetooth speakers
    */
   const scheduler = useCallback(() => {
     const ctx = audioContextRef.current;
     if (!ctx) return;
 
+    // Look ahead enough to account for latency compensation
+    const latencySeconds = audioLatencyRef.current / 1000;
+    const totalLookAhead = SCHEDULE_AHEAD_TIME + latencySeconds;
+
     // Schedule all notes that are due before the next scheduler call
-    while (nextNoteTimeRef.current < ctx.currentTime + SCHEDULE_AHEAD_TIME) {
+    while (nextNoteTimeRef.current < ctx.currentTime + totalLookAhead) {
       if (isCountingInRef.current) {
         scheduleNote(
           nextNoteTimeRef.current,
@@ -417,8 +427,24 @@ export function useMetronome() {
     }
   }, [isPlaying, start, stop]);
 
+  /**
+   * Set tempo with smooth transition handling when playing
+   * When tempo changes mid-playback, we need to reset the scheduler timing
+   * to prevent audio glitches from old timing references
+   */
   const setTempo = useCallback((t: number) => {
-    setTempoState(Math.max(30, Math.min(250, Math.round(t))));
+    const newTempo = Math.max(30, Math.min(250, Math.round(t)));
+    const ctx = audioContextRef.current;
+
+    // If playing and tempo actually changed, reset the scheduler timing
+    if (ctx && timerRef.current && newTempo !== tempoRef.current) {
+      // Reset nextNoteTime to current time
+      // This ensures the scheduler picks up the new tempo immediately
+      // The next note will be scheduled based on the new tempo
+      nextNoteTimeRef.current = ctx.currentTime;
+    }
+
+    setTempoState(newTempo);
   }, []);
 
   const setBeats = useCallback((b: number) => {
@@ -429,7 +455,19 @@ export function useMetronome() {
     setSoundTypeState(s);
   }, []);
 
+  /**
+   * Set subdivision with smooth transition handling when playing
+   * Same principle as tempo - reset scheduler timing when changed
+   */
   const setSubdivision = useCallback((s: SubdivisionType) => {
+    const ctx = audioContextRef.current;
+
+    // If playing and subdivision actually changed, reset the scheduler timing
+    if (ctx && timerRef.current && s !== subdivisionRef.current) {
+      nextNoteTimeRef.current = ctx.currentTime;
+      currentSubRef.current = 1; // Reset to first subdivision of current beat
+    }
+
     setSubdivisionState(s);
   }, []);
 
