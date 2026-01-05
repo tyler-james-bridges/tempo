@@ -1,75 +1,66 @@
 /**
- * Tempo Drumline - Design System
- * A professional metronome for drum corps and WGI drumline groups
+ * Tempo Drumline - 2026 Design System
+ * Ultra-minimal, clean, professional
  *
- * Modern, sleek design inspired by Pro Metronome and Dropspin
+ * Design Philosophy:
+ * - The tempo IS the interface
+ * - Negative space is a feature
+ * - One accent color, maximum impact
+ * - Typography-first design
+ * - Gesture-driven interactions
  */
 
+// Single accent color - electric cyan that cuts through the dark
+const ACCENT = '#00E5FF';
+
 export const colors = {
-  // Core background
-  background: {
-    primary: '#0A0A0F',      // Deep dark for OLED
-    secondary: '#12121A',     // Slightly lighter
-    tertiary: '#1A1A24',      // Card backgrounds
-    elevated: '#22222E',      // Elevated surfaces
+  // Pure blacks for OLED
+  bg: {
+    primary: '#000000',
+    elevated: '#0A0A0A',
+    surface: '#141414',
+    overlay: 'rgba(0, 0, 0, 0.85)',
   },
 
-  // Primary accent - Electric Cyan
+  // The accent - used sparingly for maximum impact
   accent: {
-    primary: '#00D4FF',       // Main accent
-    secondary: '#00A3CC',     // Darker variant
-    tertiary: '#007A99',      // Even darker
-    glow: 'rgba(0, 212, 255, 0.3)',
-    subtle: 'rgba(0, 212, 255, 0.1)',
+    primary: ACCENT,
+    dim: 'rgba(0, 229, 255, 0.6)',
+    glow: 'rgba(0, 229, 255, 0.15)',
+    subtle: 'rgba(0, 229, 255, 0.08)',
   },
 
-  // Secondary accent - Pulse Orange (for active states)
-  pulse: {
-    primary: '#FF6B35',       // Active/playing state
-    secondary: '#CC5529',     // Darker
-    glow: 'rgba(255, 107, 53, 0.4)',
-    subtle: 'rgba(255, 107, 53, 0.15)',
+  // Playing state - warm pulse
+  active: {
+    primary: '#FF3D00',
+    glow: 'rgba(255, 61, 0, 0.2)',
   },
 
-  // Accent colors for subdivisions
-  subdivision: {
-    quarter: '#00D4FF',       // Cyan
-    eighth: '#00FF94',        // Green
-    triplet: '#FFD600',       // Yellow
-    sixteenth: '#FF00D4',     // Magenta
-  },
-
-  // Status colors
-  status: {
-    success: '#00FF94',
-    warning: '#FFD600',
-    error: '#FF4757',
-    info: '#00D4FF',
-  },
-
-  // Text colors
+  // Text hierarchy
   text: {
     primary: '#FFFFFF',
-    secondary: 'rgba(255, 255, 255, 0.7)',
-    tertiary: 'rgba(255, 255, 255, 0.5)',
-    muted: 'rgba(255, 255, 255, 0.3)',
+    secondary: 'rgba(255, 255, 255, 0.6)',
+    tertiary: 'rgba(255, 255, 255, 0.35)',
+    disabled: 'rgba(255, 255, 255, 0.2)',
   },
 
-  // Border colors
+  // Minimal borders
   border: {
-    primary: 'rgba(255, 255, 255, 0.1)',
-    secondary: 'rgba(255, 255, 255, 0.05)',
-    accent: 'rgba(0, 212, 255, 0.3)',
-    glow: 'rgba(0, 212, 255, 0.5)',
+    subtle: 'rgba(255, 255, 255, 0.06)',
+    medium: 'rgba(255, 255, 255, 0.12)',
   },
 
-  // Bluetooth/connection colors
-  bluetooth: {
-    connected: '#00FF94',
-    connecting: '#FFD600',
-    disconnected: 'rgba(255, 255, 255, 0.3)',
-    searching: '#00D4FF',
+  // Beat indicators
+  beat: {
+    inactive: 'rgba(255, 255, 255, 0.15)',
+    active: ACCENT,
+    accent: '#FFFFFF',
   },
+
+  // Status
+  success: '#00E676',
+  warning: '#FFAB00',
+  error: '#FF5252',
 };
 
 export const spacing = {
@@ -79,164 +70,107 @@ export const spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
+  xxxl: 64,
 };
 
-export const borderRadius = {
+export const radius = {
   sm: 8,
   md: 12,
-  lg: 16,
-  xl: 24,
-  full: 9999,
+  lg: 20,
+  xl: 28,
+  pill: 100,
 };
 
-export const typography = {
-  // Large display for tempo
+// Typography - clean, modern, impactful
+export const font = {
+  // The hero - massive tempo display
   tempo: {
-    fontSize: 120,
-    fontWeight: '100' as const,
-    letterSpacing: -6,
-  },
-  // Medium display for beat count
-  display: {
-    fontSize: 64,
+    fontSize: 144,
     fontWeight: '200' as const,
-    letterSpacing: -2,
+    letterSpacing: -8,
+    lineHeight: 144,
   },
-  // Headings
-  h1: {
-    fontSize: 32,
-    fontWeight: '700' as const,
-    letterSpacing: -1,
+  // Large numbers
+  large: {
+    fontSize: 72,
+    fontWeight: '300' as const,
+    letterSpacing: -3,
   },
-  h2: {
-    fontSize: 24,
+  // Section headers
+  title: {
+    fontSize: 17,
     fontWeight: '600' as const,
-    letterSpacing: -0.5,
+    letterSpacing: 0.5,
   },
-  h3: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    letterSpacing: 0,
-  },
-  // Body text
+  // Body
   body: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '400' as const,
     letterSpacing: 0,
   },
-  // Labels and captions
+  // Small labels
   label: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600' as const,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     textTransform: 'uppercase' as const,
   },
+  // Tiny captions
   caption: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500' as const,
     letterSpacing: 0.5,
   },
 };
 
+// Animation timing
+export const animation = {
+  fast: 150,
+  normal: 250,
+  slow: 400,
+  spring: {
+    tension: 300,
+    friction: 20,
+  },
+};
+
 // DCI/WGI standard tempos
-export const DRUMLINE_TEMPOS = {
-  // Standard drill tempos
-  drill: [
-    { tempo: 120, label: 'March Tempo', description: 'Standard 8-to-5' },
-    { tempo: 132, label: 'Quick March', description: '6-to-5 step' },
-    { tempo: 144, label: 'Double Time', description: 'Fast 8-to-5' },
-    { tempo: 160, label: 'Sprint Tempo', description: 'High intensity' },
-    { tempo: 180, label: 'Burner', description: 'Max speed' },
-  ],
-  // Common show tempos
-  show: [
-    { tempo: 60, label: 'Ballad', description: 'Slow, expressive' },
-    { tempo: 72, label: 'Adagio', description: 'Slow, graceful' },
-    { tempo: 80, label: 'Andante', description: 'Walking pace' },
-    { tempo: 96, label: 'Moderato', description: 'Moderate' },
-    { tempo: 108, label: 'Allegretto', description: 'Light, brisk' },
-    { tempo: 120, label: 'Allegro', description: 'Fast, bright' },
-    { tempo: 138, label: 'Vivace', description: 'Lively' },
-    { tempo: 152, label: 'Presto', description: 'Very fast' },
-  ],
-  // Practice tempos
-  practice: [
-    { tempo: 40, label: 'Slow Practice', description: 'Detail work' },
-    { tempo: 60, label: 'Medium Slow', description: 'Building speed' },
-    { tempo: 80, label: 'Medium', description: 'Comfortable' },
-    { tempo: 100, label: 'Medium Fast', description: 'Challenge' },
-    { tempo: 120, label: 'Performance', description: 'Show speed' },
-  ],
-};
-
-// Subdivision patterns for drumline
-export const SUBDIVISION_PATTERNS = {
-  basic: [
-    { id: 1, label: '♩', name: 'Quarter', description: '1 per beat' },
-    { id: 2, label: '♪♪', name: 'Eighth', description: '2 per beat' },
-    { id: 3, label: '♪³', name: 'Triplet', description: '3 per beat' },
-    { id: 4, label: '♬', name: 'Sixteenth', description: '4 per beat' },
-  ],
-  advanced: [
-    { id: 5, label: '♪⁵', name: 'Quintuplet', description: '5 per beat' },
-    { id: 6, label: '♪⁶', name: 'Sextuplet', description: '6 per beat' },
-  ],
-};
-
-// Time signatures common in drumline
-export const TIME_SIGNATURES = [
-  { beats: 2, subdivision: 4, label: '2/4' },
-  { beats: 3, subdivision: 4, label: '3/4' },
-  { beats: 4, subdivision: 4, label: '4/4' },
-  { beats: 5, subdivision: 4, label: '5/4' },
-  { beats: 6, subdivision: 4, label: '6/4' },
-  { beats: 7, subdivision: 4, label: '7/4' },
-  { beats: 6, subdivision: 8, label: '6/8' },
-  { beats: 9, subdivision: 8, label: '9/8' },
-  { beats: 12, subdivision: 8, label: '12/8' },
+export const DRUMLINE_PRESETS = [
+  { bpm: 120, name: '8 to 5', desc: 'Standard march' },
+  { bpm: 132, name: '6 to 5', desc: 'Quick step' },
+  { bpm: 144, name: 'Double', desc: 'Double time' },
+  { bpm: 160, name: 'Sprint', desc: 'High energy' },
+  { bpm: 180, name: 'Burner', desc: 'Maximum' },
 ];
 
-// Metronome sounds optimized for drumline
-export const SOUND_PRESETS = {
-  rimshot: {
-    label: 'Rimshot',
-    icon: '🥁',
-    description: 'Sharp, cutting click',
-  },
-  woodblock: {
-    label: 'Woodblock',
-    icon: '🪵',
-    description: 'Classic metronome',
-  },
-  hihat: {
-    label: 'Hi-Hat',
-    icon: '🎤',
-    description: 'Soft, musical',
-  },
-  cowbell: {
-    label: 'Cowbell',
-    icon: '🔔',
-    description: 'Loud, piercing',
-  },
-  beep: {
-    label: 'Digital',
-    icon: '📻',
-    description: 'Electronic beep',
-  },
-  voice: {
-    label: 'Count',
-    icon: '🗣️',
-    description: 'Voice count-off',
-  },
-};
+// Common show tempos
+export const SHOW_PRESETS = [
+  { bpm: 60, name: 'Ballad' },
+  { bpm: 72, name: 'Slow' },
+  { bpm: 84, name: 'Medium Slow' },
+  { bpm: 96, name: 'Medium' },
+  { bpm: 108, name: 'Medium Fast' },
+  { bpm: 120, name: 'Fast' },
+  { bpm: 138, name: 'Very Fast' },
+  { bpm: 152, name: 'Presto' },
+];
 
-export default {
-  colors,
-  spacing,
-  borderRadius,
-  typography,
-  DRUMLINE_TEMPOS,
-  SUBDIVISION_PATTERNS,
-  TIME_SIGNATURES,
-  SOUND_PRESETS,
-};
+// Subdivisions
+export const SUBDIVISIONS = [
+  { value: 1, symbol: '𝅘𝅥', name: 'Quarter' },
+  { value: 2, symbol: '𝅘𝅥𝅮', name: 'Eighth' },
+  { value: 3, symbol: '³', name: 'Triplet' },
+  { value: 4, symbol: '𝅘𝅥𝅯', name: '16th' },
+];
+
+// Time signatures
+export const TIME_SIGS = [
+  { beats: 2, label: '2/4' },
+  { beats: 3, label: '3/4' },
+  { beats: 4, label: '4/4' },
+  { beats: 5, label: '5/4' },
+  { beats: 6, label: '6/4' },
+  { beats: 7, label: '7/4' },
+];
+
+export default { colors, spacing, radius, font, animation };

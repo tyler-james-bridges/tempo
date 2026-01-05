@@ -1,9 +1,10 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
-  StyleSheet,
   Text,
+  StyleSheet,
   Pressable,
+  Animated,
   PanResponder,
   Dimensions,
 } from 'react-native';
@@ -12,15 +13,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
 
 import { useMetronome } from '../hooks/useMetronome';
-import { getSubdivisionLabel } from '../utils/tempoMarkings';
-import { BeatRing } from '../components/modern/BeatRing';
-import { TempoDisplay } from '../components/modern/TempoDisplay';
-import { GlassPill } from '../components/modern/GlassPill';
-import { PlayPauseButton } from '../components/modern/PlayPauseButton';
-import { SettingsPanel } from '../components/modern/SettingsPanel';
-import { NumberPickerModal } from '../components/NumberPickerModal';
+import { colors, font, spacing } from '../constants/theme';
+import { SettingsDrawer } from '../components/SettingsDrawer';
+import { BeatIndicator } from '../components/BeatIndicator';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export function MainScreen() {
   const {
@@ -51,239 +48,212 @@ export function MainScreen() {
   useKeepAwake();
 
   const [showSettings, setShowSettings] = useState(false);
-  const [showTempoPicker, setShowTempoPicker] = useState(false);
 
-  // Track tempo for pan gesture - memoized to prevent recreation
-  const lastTempoRef = useRef(tempo);
+  // Animated values
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  // Pulse animation on beat
+  React.useEffect(() => {
+    if (isPlaying && currentBeat > 0) {
+      // Quick pulse
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.02,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Glow on downbeat
+      if (currentBeat === 1) {
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }
+  }, [currentBeat, isPlaying, pulseAnim, glowAnim]);
+
+  // Gesture handling for tempo
+  const lastY = useRef(0);
+  const startTempo = useRef(tempo);
+
   const panResponder = useMemo(
-    () => PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-      },
-      onPanResponderGrant: () => {
-        lastTempoRef.current = tempo;
-      },
-      onPanResponderMove: (_, gestureState) => {
-        const sensitivity = 0.5;
-        const delta = -gestureState.dy * sensitivity;
-        const newTempo = Math.round(lastTempoRef.current + delta);
-        setTempo(newTempo);
-      },
-    }),
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gs) =>
+          Math.abs(gs.dy) > 15 && Math.abs(gs.dy) > Math.abs(gs.dx) * 1.5,
+        onPanResponderGrant: () => {
+          startTempo.current = tempo;
+          lastY.current = 0;
+        },
+        onPanResponderMove: (_, gs) => {
+          const delta = Math.round((lastY.current - gs.dy) * 0.3);
+          if (delta !== 0) {
+            setTempo(startTempo.current + Math.round(-gs.dy * 0.4));
+          }
+        },
+      }),
     [tempo, setTempo]
   );
 
-  const handleTapTempo = useCallback(() => {
-    tapTempo();
-  }, [tapTempo]);
-
-  // Memoize beat rings to prevent recreation on every render
-  const beatRings = useMemo(() =>
-    Array.from({ length: beats }).map((_, i) => (
-      <BeatRing
-        key={i}
-        beatNumber={i + 1}
-        totalBeats={beats}
-        isActive={currentBeat === i + 1}
-        isAccent={isAccented(i + 1)}
-        isPlaying={isPlaying}
-      />
-    )),
-    [beats, currentBeat, isAccented, isPlaying]
-  );
+  // Count-in display
+  const displayTempo = isCountingIn ? Math.abs(currentBeat) : tempo;
+  const isDownbeat = currentBeat === 1 && isPlaying;
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Colored gradient orbs for depth */}
-      <View style={styles.gradientOrb1} />
-      <View style={styles.gradientOrb2} />
-      <View style={styles.gradientOrb3} />
+      {/* Subtle glow effect on downbeat */}
+      <Animated.View
+        style={[
+          styles.glowOverlay,
+          {
+            opacity: glowAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.15],
+            }),
+          },
+        ]}
+      />
 
-      <SafeAreaView style={styles.safeArea} {...panResponder.panHandlers} accessibilityLabel="Tempo metronome main screen">
-        {/* Header */}
+      <SafeAreaView style={styles.safe} {...panResponder.panHandlers}>
+        {/* Minimal header */}
         <View style={styles.header}>
-          <Text style={styles.appTitle}>Tempo</Text>
+          <Text style={styles.brandMark}>TEMPO</Text>
           <Pressable
-            style={({ pressed }) => [
-              styles.settingsButton,
-              pressed && styles.buttonPressed,
-            ]}
             onPress={() => setShowSettings(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
+            style={({ pressed }) => [
+              styles.menuButton,
+              pressed && styles.pressed,
+            ]}
+            hitSlop={20}
           >
-            <View style={styles.settingsIcon}>
-              <View style={styles.settingsDot} />
-              <View style={styles.settingsDot} />
-              <View style={styles.settingsDot} />
+            <View style={styles.menuIcon}>
+              <View style={styles.menuLine} />
+              <View style={[styles.menuLine, styles.menuLineShort]} />
             </View>
           </Pressable>
         </View>
 
-        {/* Main Content */}
-        <View style={styles.mainContent}>
-          {/* Beat Ring with colored glow */}
-          <View style={styles.beatRingOuter}>
-            {/* Ambient glow */}
-            <View style={[
-              styles.ambientGlow,
-              isPlaying && styles.ambientGlowActive,
-            ]} />
-
-            {/* Ring track */}
-            <View style={styles.ringTrack} />
-
-            <View style={styles.beatRingContainer}>
-              {beatRings}
-
-              {isCountingIn ? (
-                <View style={styles.countInContainer}>
-                  <Text style={styles.countInNumber}>{Math.abs(currentBeat)}</Text>
-                  <Text style={styles.countInLabel}>COUNT IN</Text>
-                </View>
-              ) : (
-                <TempoDisplay
-                  tempo={tempo}
-                  isPlaying={isPlaying}
-                  onPress={() => setShowTempoPicker(true)}
-                />
-              )}
-            </View>
-          </View>
-
-          {/* Quick info pills */}
-          <View style={styles.infoPills} accessibilityRole="toolbar">
-            <Pressable
-              style={({ pressed }) => [
-                styles.infoPill,
-                pressed && styles.infoPillPressed,
-              ]}
-              onPress={() => setShowSettings(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Time signature: ${beats}/4. Tap to change`}
-            >
-              <Text style={styles.infoPillText}>{beats}/4</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.infoPill,
-                styles.infoPillAccent,
-                pressed && styles.infoPillPressed,
-              ]}
-              onPress={() => setShowSettings(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Subdivision: ${getSubdivisionLabel(subdivision)}. Tap to change`}
-            >
-              <Text style={[styles.infoPillText, styles.infoPillTextAccent]}>
-                {subdivision === 1 ? '♩' : subdivision === 2 ? '♪♪' : subdivision === 3 ? '♪³' : '♬'}
+        {/* Main tempo display */}
+        <View style={styles.tempoSection}>
+          <Animated.View
+            style={[
+              styles.tempoContainer,
+              { transform: [{ scale: pulseAnim }] },
+            ]}
+          >
+            <Pressable onPress={toggle} onLongPress={tapTempo}>
+              <Text
+                style={[
+                  styles.tempoNumber,
+                  isPlaying && styles.tempoNumberActive,
+                  isCountingIn && styles.tempoNumberCountIn,
+                ]}
+              >
+                {displayTempo}
               </Text>
             </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.infoPill,
-                pressed && styles.infoPillPressed,
-              ]}
-              onPress={() => setShowSettings(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Sound: ${soundType}. Tap to change`}
-            >
-              <Text style={styles.infoPillText}>
-                {soundType.charAt(0).toUpperCase() + soundType.slice(1)}
-              </Text>
-            </Pressable>
-          </View>
+          </Animated.View>
+
+          <Text style={styles.bpmLabel}>
+            {isCountingIn ? 'COUNT IN' : 'BPM'}
+          </Text>
+
+          {/* Subtle tempo adjustment hint */}
+          <Text style={styles.hint}>swipe to adjust · tap to play · hold for tap tempo</Text>
         </View>
 
-        {/* Bottom Controls */}
-        <View style={styles.bottomControls}>
-          {/* Tempo adjustment buttons */}
-          <View style={styles.tempoControls} accessibilityRole="toolbar" accessibilityLabel="Tempo adjustment">
-            {[-5, -1, +1, +5].map((delta) => (
-              <Pressable
-                key={delta}
-                style={({ pressed }) => [
-                  styles.tempoAdjustButton,
-                  pressed && styles.buttonPressed,
-                ]}
-                onPress={() => setTempo(tempo + delta)}
-                accessibilityRole="button"
-                accessibilityLabel={`${delta > 0 ? 'Increase' : 'Decrease'} tempo by ${Math.abs(delta)} BPM`}
-              >
-                <Text style={styles.tempoAdjustText}>
-                  {delta > 0 ? `+${delta}` : delta}
-                </Text>
-              </Pressable>
+        {/* Beat indicators */}
+        <View style={styles.beatSection}>
+          <View style={styles.beatRow}>
+            {Array.from({ length: beats }).map((_, i) => (
+              <BeatIndicator
+                key={i}
+                index={i}
+                isActive={currentBeat === i + 1 && isPlaying}
+                isAccent={isAccented(i + 1)}
+                isPlaying={isPlaying}
+              />
             ))}
           </View>
 
-          {/* Main action buttons */}
-          <View style={styles.actionButtons}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.sideButton,
-                pressed && styles.buttonPressed,
-              ]}
-              onPress={handleTapTempo}
-              accessibilityRole="button"
-              accessibilityLabel="Tap tempo"
-              accessibilityHint="Tap repeatedly to set tempo"
-            >
-              <Text style={styles.sideButtonText}>TAP</Text>
-            </Pressable>
+          <Text style={styles.timeSignature}>{beats}/4</Text>
+        </View>
 
-            <PlayPauseButton
-              isPlaying={isPlaying}
-              onPress={toggle}
-              size={88}
-            />
+        {/* Quick actions */}
+        <View style={styles.quickActions}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.quickButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => setTempo(tempo - 1)}
+          >
+            <Text style={styles.quickButtonText}>−</Text>
+          </Pressable>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.sideButton,
-                pressed && styles.buttonPressed,
-              ]}
-              onPress={() => setShowSettings(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Edit settings"
-            >
-              <Text style={styles.sideButtonText}>EDIT</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.playButton,
+              isPlaying && styles.playButtonActive,
+              pressed && styles.pressed,
+            ]}
+            onPress={toggle}
+          >
+            <View style={isPlaying ? styles.stopIcon : styles.playIcon} />
+          </Pressable>
 
-          <Text style={styles.swipeHint}>Swipe up/down to adjust tempo</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.quickButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => setTempo(tempo + 1)}
+          >
+            <Text style={styles.quickButtonText}>+</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
 
-      <SettingsPanel
-        isVisible={showSettings}
+      {/* Settings drawer */}
+      <SettingsDrawer
+        visible={showSettings}
         onClose={() => setShowSettings(false)}
-        soundType={soundType}
-        setSoundType={setSoundType}
-        subdivision={subdivision}
-        setSubdivision={setSubdivision}
-        accentPattern={accentPattern}
-        setAccentPattern={setAccentPattern}
-        volume={volume}
-        setVolume={setVolume}
+        tempo={tempo}
+        setTempo={setTempo}
         beats={beats}
         setBeats={setBeats}
+        subdivision={subdivision}
+        setSubdivision={setSubdivision}
+        soundType={soundType}
+        setSoundType={setSoundType}
+        volume={volume}
+        setVolume={setVolume}
+        accentPattern={accentPattern}
+        setAccentPattern={setAccentPattern}
         countInEnabled={countInEnabled}
         setCountInEnabled={setCountInEnabled}
         muteAudio={muteAudio}
         setMuteAudio={setMuteAudio}
-      />
-
-      <NumberPickerModal
-        visible={showTempoPicker}
-        title="Set Tempo"
-        value={tempo}
-        min={30}
-        max={250}
-        onSelect={(val) => val !== null && setTempo(val)}
-        onClose={() => setShowTempoPicker(false)}
+        tapTempo={tapTempo}
       />
     </View>
   );
@@ -292,218 +262,155 @@ export function MainScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#050508',
+    backgroundColor: colors.bg.primary,
   },
-  // Warm gradient orbs - musician-friendly amber/gold tones
-  gradientOrb1: {
-    position: 'absolute',
-    top: -100,
-    left: -100,
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    backgroundColor: '#1a1408', // warm brown
+  glowOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.accent.primary,
   },
-  gradientOrb2: {
-    position: 'absolute',
-    top: '40%',
-    right: -150,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: '#1a0f08', // deep amber
-  },
-  gradientOrb3: {
-    position: 'absolute',
-    bottom: -50,
-    left: '20%',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#0f0d0a', // warm charcoal
-  },
-  safeArea: {
+  safe: {
     flex: 1,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
-  appTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1,
+  brandMark: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text.tertiary,
+    letterSpacing: 3,
   },
-  settingsButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+  menuButton: {
+    padding: spacing.sm,
   },
-  buttonPressed: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    transform: [{ scale: 0.96 }],
+  pressed: {
+    opacity: 0.6,
   },
-  settingsIcon: {
-    flexDirection: 'row',
+  menuIcon: {
+    width: 20,
     gap: 5,
   },
-  settingsDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+  menuLine: {
+    height: 2,
+    backgroundColor: colors.text.tertiary,
+    borderRadius: 1,
   },
-  mainContent: {
+  menuLineShort: {
+    width: 14,
+  },
+
+  // Tempo section
+  tempoSection: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  beatRingOuter: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: 300,
-    height: 300,
+    paddingBottom: spacing.xxl,
   },
-  ambientGlow: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#FFB347', // warm gold
-    opacity: 0.04,
-  },
-  ambientGlowActive: {
-    opacity: 0.15,
-    shadowColor: '#FFB347',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 60,
-  },
-  ringTrack: {
-    position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  beatRingContainer: {
-    width: 280,
-    height: 280,
+  tempoContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
   },
-  infoPills: {
+  tempoNumber: {
+    fontSize: font.tempo.fontSize,
+    fontWeight: font.tempo.fontWeight,
+    letterSpacing: font.tempo.letterSpacing,
+    color: colors.text.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  tempoNumberActive: {
+    color: colors.accent.primary,
+  },
+  tempoNumberCountIn: {
+    color: colors.success,
+  },
+  bpmLabel: {
+    fontSize: font.label.fontSize,
+    fontWeight: font.label.fontWeight,
+    letterSpacing: font.label.letterSpacing,
+    color: colors.text.tertiary,
+    marginTop: -spacing.md,
+  },
+  hint: {
+    fontSize: font.caption.fontSize,
+    color: colors.text.disabled,
+    marginTop: spacing.xl,
+    letterSpacing: 0.3,
+  },
+
+  // Beat section
+  beatSection: {
+    alignItems: 'center',
+    paddingBottom: spacing.xl,
+  },
+  beatRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 48,
+    gap: spacing.md,
   },
-  infoPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+  timeSignature: {
+    fontSize: font.label.fontSize,
+    fontWeight: font.label.fontWeight,
+    color: colors.text.disabled,
+    marginTop: spacing.md,
+    letterSpacing: 1,
   },
-  infoPillAccent: {
-    backgroundColor: 'rgba(255,179,71,0.12)',
-    borderColor: 'rgba(255,179,71,0.3)',
-  },
-  infoPillPressed: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  infoPillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
-  },
-  infoPillTextAccent: {
-    color: '#FFB347', // warm gold
-  },
-  bottomControls: {
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-  },
-  tempoControls: {
+
+  // Quick actions
+  quickActions: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
-    marginBottom: 28,
-  },
-  tempoAdjustButton: {
-    width: 60,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     alignItems: 'center',
+    gap: spacing.xl,
+    paddingBottom: spacing.xl,
+  },
+  quickButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.bg.surface,
     justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border.subtle,
   },
-  tempoAdjustText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.5)',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-  },
-  sideButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  sideButtonText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 1.5,
-  },
-  swipeHint: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.2)',
-    textAlign: 'center',
-    marginTop: 24,
-    letterSpacing: 0.5,
-  },
-  countInContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  countInNumber: {
-    fontSize: 96,
+  quickButtonText: {
+    fontSize: 28,
     fontWeight: '300',
-    color: '#10B981',
-    letterSpacing: -4,
+    color: colors.text.secondary,
   },
-  countInLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#10B981',
-    letterSpacing: 4,
-    textTransform: 'uppercase',
-    marginTop: 4,
+  playButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.bg.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.medium,
+  },
+  playButtonActive: {
+    backgroundColor: colors.active.glow,
+    borderColor: colors.active.primary,
+  },
+  playIcon: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 24,
+    borderTopWidth: 15,
+    borderBottomWidth: 15,
+    borderLeftColor: colors.text.primary,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    marginLeft: 6,
+  },
+  stopIcon: {
+    width: 24,
+    height: 24,
+    backgroundColor: colors.text.primary,
+    borderRadius: 4,
   },
 });
