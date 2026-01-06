@@ -417,18 +417,19 @@ export function MainScreen() {
 
         {/* Bottom Controls - Simplified and Properly Spaced */}
         <View style={styles.controlsContainer}>
-          {/* Tempo adjustment row */}
+          {/* Tempo adjustment row with half/double time */}
           <View style={styles.tempoAdjustRow}>
             <Pressable
-              onPress={() => setTempo(tempo - 10)}
+              onPress={() => setTempo(Math.round(tempo / 2))}
               style={({ pressed }) => [
                 styles.tempoAdjustButton,
+                styles.tempoMultiplierButton,
                 pressed && styles.tempoAdjustButtonPressed,
               ]}
-              accessibilityLabel="Decrease tempo by 10"
+              accessibilityLabel="Half time - halve tempo"
               accessibilityRole="button"
             >
-              <Text style={styles.tempoAdjustText}>-10</Text>
+              <Text style={styles.tempoMultiplierText}>½×</Text>
             </Pressable>
 
             <Pressable
@@ -440,7 +441,7 @@ export function MainScreen() {
               accessibilityLabel="Decrease tempo by 1"
               accessibilityRole="button"
             >
-              <Text style={styles.tempoAdjustText}>-</Text>
+              <Text style={styles.tempoAdjustText}>−</Text>
             </Pressable>
 
             <Pressable
@@ -456,15 +457,16 @@ export function MainScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => setTempo(tempo + 10)}
+              onPress={() => setTempo(tempo * 2)}
               style={({ pressed }) => [
                 styles.tempoAdjustButton,
+                styles.tempoMultiplierButton,
                 pressed && styles.tempoAdjustButtonPressed,
               ]}
-              accessibilityLabel="Increase tempo by 10"
+              accessibilityLabel="Double time - double tempo"
               accessibilityRole="button"
             >
-              <Text style={styles.tempoAdjustText}>+10</Text>
+              <Text style={styles.tempoMultiplierText}>2×</Text>
             </Pressable>
           </View>
 
@@ -791,6 +793,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: colors.text.secondary,
+  },
+  tempoMultiplierButton: {
+    backgroundColor: colors.accent.subtle,
+    borderColor: colors.accent.dim,
+  },
+  tempoMultiplierText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.accent.primary,
   },
 
   // Main Action Row
