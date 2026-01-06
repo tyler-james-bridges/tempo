@@ -1,3 +1,3 @@
 export { useMetronome } from './useMetronome';
-export { useSetlist } from './useSetlist';
-export type { Setlist, SetlistItem, SetlistHook } from './useSetlist';
+export { usePresets } from './usePresets';
+export type { TempoPreset, PresetsHook } from './usePresets';

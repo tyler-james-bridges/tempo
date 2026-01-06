@@ -15,7 +15,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { AudioContext, AudioBuffer } from 'react-native-audio-api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = 'metronome_settings_v5';
+const STORAGE_KEY = 'metronome_settings_v6';
 
 export type SoundType = 'click' | 'beep' | 'wood' | 'cowbell';
 export type SubdivisionType = 1 | 2 | 3 | 4;
@@ -86,6 +86,8 @@ export function useMetronome() {
   const [volume, setVolumeState] = useState(0.8);
   const [accentPattern, setAccentPatternState] = useState<AccentPattern>(0);
   const [countInEnabled, setCountInEnabledState] = useState(false);
+  // Count-in beats - can be 1x, 2x, 3x, or 4x the time signature beats
+  const [countInBeats, setCountInBeatsState] = useState(1); // Multiplier: 1 = one bar, 2 = two bars, etc.
   const [isCountingIn, setIsCountingIn] = useState(false);
   const [muteAudio, setMuteAudioState] = useState(false);
   // Bluetooth/audio latency compensation in milliseconds
@@ -120,6 +122,7 @@ export function useMetronome() {
   const soundTypeRef = useRef(soundType);
   const accentPatternRef = useRef(accentPattern);
   const countInEnabledRef = useRef(countInEnabled);
+  const countInBeatsRef = useRef(countInBeats);
   const audioLatencyRef = useRef(audioLatency);
 
   // Keep refs in sync
@@ -133,6 +136,7 @@ export function useMetronome() {
   soundTypeRef.current = soundType;
   accentPatternRef.current = accentPattern;
   countInEnabledRef.current = countInEnabled;
+  countInBeatsRef.current = countInBeats;
 
   // Load settings on mount
   useEffect(() => {
@@ -148,6 +152,7 @@ export function useMetronome() {
               volume?: number;
               accentPattern?: AccentPattern;
               countInEnabled?: boolean;
+              countInBeats?: number;
               muteAudio?: boolean;
               audioLatency?: number;
             };
@@ -158,6 +163,7 @@ export function useMetronome() {
             if (d.volume !== undefined) setVolumeState(d.volume);
             if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
             if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
+            if (d.countInBeats !== undefined) setCountInBeatsState(d.countInBeats);
             if (d.muteAudio !== undefined) setMuteAudioState(d.muteAudio);
             if (d.audioLatency !== undefined) setAudioLatencyState(d.audioLatency);
           } catch (parseError) {
@@ -175,11 +181,11 @@ export function useMetronome() {
   // Save settings
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, audioLatency
+      tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, countInBeats, muteAudio, audioLatency
     })).catch((error) => {
       console.warn('Failed to save metronome settings:', error);
     });
-  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, muteAudio, audioLatency]);
+  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, countInBeats, muteAudio, audioLatency]);
 
   // Initialize audio context with fallback for unsupported devices
   useEffect(() => {
@@ -310,8 +316,9 @@ export function useMetronome() {
     if (isCountingInRef.current) {
       countInBeatRef.current++;
 
-      // Check if count-in is complete
-      if (countInBeatRef.current >= beatsRef.current) {
+      // Check if count-in is complete (total beats = time signature beats * multiplier)
+      const totalCountInBeats = beatsRef.current * countInBeatsRef.current;
+      if (countInBeatRef.current >= totalCountInBeats) {
         isCountingInRef.current = false;
         setIsCountingIn(false);
         currentBeatRef.current = 1;
@@ -478,6 +485,11 @@ export function useMetronome() {
     setCountInEnabledState(enabled);
   }, []);
 
+  const setCountInBeats = useCallback((multiplier: number) => {
+    // Clamp between 1 and 4 bars
+    setCountInBeatsState(Math.max(1, Math.min(4, multiplier)));
+  }, []);
+
   const setMuteAudio = useCallback((muted: boolean) => {
     setMuteAudioState(muted);
   }, []);
@@ -627,6 +639,7 @@ export function useMetronome() {
     volume,
     accentPattern,
     countInEnabled,
+    countInBeats,
     isCountingIn,
     muteAudio,
     audioLatency,
@@ -643,6 +656,7 @@ export function useMetronome() {
     setVolume,
     setAccentPattern,
     setCountInEnabled,
+    setCountInBeats,
     setMuteAudio,
     setAudioLatency,
     startCalibration,

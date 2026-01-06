@@ -7,13 +7,14 @@ import {
   Pressable,
   ScrollView,
   Dimensions,
+  TextInput,
+  Alert,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS, DRUMLINE_PRESETS, SHOW_PRESETS } from '../constants/theme';
+import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS } from '../constants/theme';
 import { SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
-import { useSetlist } from '../hooks/useSetlist';
+import { usePresets, TempoPreset } from '../hooks/usePresets';
 import { BluetoothPanel } from './BluetoothPanel';
-import { SetlistPanel } from './SetlistPanel';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -34,9 +35,10 @@ interface SettingsDrawerProps {
   setAccentPattern: (p: AccentPattern) => void;
   countInEnabled: boolean;
   setCountInEnabled: (e: boolean) => void;
+  countInBeats: number;
+  setCountInBeats: (b: number) => void;
   muteAudio: boolean;
   setMuteAudio: (m: boolean) => void;
-  tapTempo: () => void;
   // Audio latency / Bluetooth compensation
   audioLatency: number;
   setAudioLatency: (ms: number) => void;
@@ -55,7 +57,7 @@ const SOUNDS: { type: SoundType; label: string; desc: string }[] = [
   { type: 'cowbell', label: 'Bell', desc: 'Bright' },
 ];
 
-type Tab = 'tempo' | 'sound' | 'setlist' | 'bluetooth';
+type Tab = 'tempo' | 'sound' | 'bluetooth';
 
 export function SettingsDrawer({
   visible,
@@ -74,9 +76,10 @@ export function SettingsDrawer({
   setAccentPattern,
   countInEnabled,
   setCountInEnabled,
+  countInBeats,
+  setCountInBeats,
   muteAudio,
   setMuteAudio,
-  tapTempo,
   audioLatency,
   setAudioLatency,
   isCalibrating,
@@ -89,8 +92,46 @@ export function SettingsDrawer({
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState<Tab>('tempo');
+  const [showAddPreset, setShowAddPreset] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
 
-  const setlistManager = useSetlist();
+  const presetsManager = usePresets();
+
+  // Calculate count-in options based on time signature
+  const getCountInOptions = () => {
+    const options = [];
+    for (let i = 1; i <= 4; i++) {
+      const totalBeats = beats * i;
+      options.push({
+        multiplier: i,
+        label: i === 1 ? `${totalBeats} beats (1 bar)` : `${totalBeats} beats (${i} bars)`,
+      });
+    }
+    return options;
+  };
+
+  const handleAddPreset = () => {
+    if (newPresetName.trim() || true) {
+      presetsManager.addPreset(newPresetName.trim() || `${tempo} BPM`, tempo, beats);
+      setNewPresetName('');
+      setShowAddPreset(false);
+    }
+  };
+
+  const handleDeletePreset = (preset: TempoPreset) => {
+    Alert.alert(
+      'Delete Preset',
+      `Are you sure you want to delete "${preset.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => presetsManager.deletePreset(preset.id),
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     if (visible) {
@@ -166,24 +207,6 @@ export function SettingsDrawer({
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.tab, activeTab === 'setlist' && styles.tabActive]}
-            onPress={() => setActiveTab('setlist')}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === 'setlist' }}
-            accessibilityLabel="Setlist management"
-          >
-            <Text style={[styles.tabText, activeTab === 'setlist' && styles.tabTextActive]}>
-              Setlist
-            </Text>
-            {setlistManager.activeSetlist && (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>
-                  {setlistManager.activeItemIndex + 1}/{setlistManager.activeSetlist.items.length}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-          <Pressable
             style={[styles.tab, activeTab === 'bluetooth' && styles.tabActive]}
             onPress={() => setActiveTab('bluetooth')}
             accessibilityRole="tab"
@@ -211,71 +234,82 @@ export function SettingsDrawer({
         >
           {activeTab === 'tempo' && (
             <>
-              {/* Drumline Presets */}
+              {/* User Presets */}
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>DRUMLINE</Text>
-                <View style={styles.presetRow}>
-                  {DRUMLINE_PRESETS.map((p) => (
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionLabel}>MY PRESETS</Text>
+                  <Pressable
+                    style={styles.addPresetButton}
+                    onPress={() => setShowAddPreset(true)}
+                  >
+                    <Text style={styles.addPresetButtonText}>+ Save Current</Text>
+                  </Pressable>
+                </View>
+
+                {showAddPreset && (
+                  <View style={styles.addPresetForm}>
+                    <TextInput
+                      style={styles.presetInput}
+                      placeholder="Preset name (optional)"
+                      placeholderTextColor={colors.text.disabled}
+                      value={newPresetName}
+                      onChangeText={setNewPresetName}
+                      autoFocus
+                    />
+                    <View style={styles.addPresetActions}>
+                      <Pressable
+                        style={styles.cancelButton}
+                        onPress={() => {
+                          setShowAddPreset(false);
+                          setNewPresetName('');
+                        }}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.saveButton}
+                        onPress={handleAddPreset}
+                      >
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.presetGrid}>
+                  {presetsManager.presets.map((preset) => (
                     <Pressable
-                      key={p.bpm}
+                      key={preset.id}
                       style={[
                         styles.presetChip,
-                        tempo === p.bpm && styles.presetChipActive,
+                        tempo === preset.bpm && beats === preset.beats && styles.presetChipActive,
                       ]}
-                      onPress={() => setTempo(p.bpm)}
+                      onPress={() => {
+                        setTempo(preset.bpm);
+                        setBeats(preset.beats);
+                      }}
+                      onLongPress={() => handleDeletePreset(preset)}
                     >
                       <Text
                         style={[
                           styles.presetBpm,
-                          tempo === p.bpm && styles.presetTextActive,
+                          tempo === preset.bpm && beats === preset.beats && styles.presetTextActive,
                         ]}
                       >
-                        {p.bpm}
+                        {preset.bpm}
                       </Text>
                       <Text
                         style={[
                           styles.presetName,
-                          tempo === p.bpm && styles.presetTextActive,
+                          tempo === preset.bpm && beats === preset.beats && styles.presetTextActive,
                         ]}
                       >
-                        {p.name}
+                        {preset.name}
                       </Text>
                     </Pressable>
                   ))}
                 </View>
-              </View>
-
-              {/* Show Presets */}
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>SHOW TEMPOS</Text>
-                <View style={styles.chipRow}>
-                  {SHOW_PRESETS.map((p) => (
-                    <Pressable
-                      key={p.bpm}
-                      style={[
-                        styles.chip,
-                        tempo === p.bpm && styles.chipActive,
-                      ]}
-                      onPress={() => setTempo(p.bpm)}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          tempo === p.bpm && styles.chipTextActive,
-                        ]}
-                      >
-                        {p.bpm}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              {/* Tap Tempo */}
-              <View style={styles.section}>
-                <Pressable style={styles.tapButton} onPress={tapTempo}>
-                  <Text style={styles.tapButtonText}>TAP TEMPO</Text>
-                </Pressable>
+                <Text style={styles.presetHint}>Long-press to delete a preset</Text>
               </View>
 
               {/* Time Signature */}
@@ -424,20 +458,20 @@ export function SettingsDrawer({
                 </View>
               </View>
 
-              {/* Options */}
+              {/* Count-in Options */}
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>OPTIONS</Text>
+                <Text style={styles.sectionLabel}>COUNT-IN</Text>
                 <View style={styles.optionsCard}>
                   <Pressable
                     style={styles.optionRow}
                     onPress={() => setCountInEnabled(!countInEnabled)}
                     accessibilityRole="switch"
                     accessibilityState={{ checked: countInEnabled }}
-                    accessibilityLabel="Count-in one bar before starting"
+                    accessibilityLabel="Count-in before starting"
                   >
                     <View style={styles.optionContent}>
-                      <Text style={styles.optionLabel}>Count-in</Text>
-                      <Text style={styles.optionDesc}>One bar before starting</Text>
+                      <Text style={styles.optionLabel}>Enable Count-in</Text>
+                      <Text style={styles.optionDesc}>Play count before starting</Text>
                     </View>
                     <View
                       style={[styles.toggle, countInEnabled && styles.toggleActive]}
@@ -450,7 +484,42 @@ export function SettingsDrawer({
                       />
                     </View>
                   </Pressable>
-                  <View style={styles.optionDivider} />
+                  {countInEnabled && (
+                    <>
+                      <View style={styles.optionDivider} />
+                      <View style={styles.countInSection}>
+                        <Text style={styles.countInLabel}>Count-in Length</Text>
+                        <View style={styles.countInOptions}>
+                          {getCountInOptions().map((option) => (
+                            <Pressable
+                              key={option.multiplier}
+                              style={[
+                                styles.countInChip,
+                                countInBeats === option.multiplier && styles.countInChipActive,
+                              ]}
+                              onPress={() => setCountInBeats(option.multiplier)}
+                            >
+                              <Text
+                                style={[
+                                  styles.countInChipText,
+                                  countInBeats === option.multiplier && styles.countInChipTextActive,
+                                ]}
+                              >
+                                {option.label}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </View>
+
+              {/* Other Options */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>OPTIONS</Text>
+                <View style={styles.optionsCard}>
                   <Pressable
                     style={styles.optionRow}
                     onPress={() => setMuteAudio(!muteAudio)}
@@ -476,16 +545,6 @@ export function SettingsDrawer({
                 </View>
               </View>
             </>
-          )}
-
-          {activeTab === 'setlist' && (
-            <SetlistPanel
-              setlist={setlistManager}
-              onSelectTempo={(newTempo, newBeats) => {
-                setTempo(newTempo);
-                setBeats(newBeats);
-              }}
-            />
           )}
 
           {activeTab === 'bluetooth' && (
@@ -660,22 +719,111 @@ const styles = StyleSheet.create({
   presetTextActive: {
     color: colors.accent.primary,
   },
-
-  // Tap tempo - prominent button
-  tapButton: {
+  presetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm + 2,
+  },
+  presetHint: {
+    fontSize: 12,
+    color: colors.text.disabled,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  addPresetButton: {
+    backgroundColor: colors.accent.subtle,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+  },
+  addPresetButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.accent.primary,
+  },
+  addPresetForm: {
     backgroundColor: colors.bg.surface,
     borderRadius: radius.lg,
-    borderWidth: 2,
-    borderColor: colors.border.medium,
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    minHeight: 56,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
-  tapButtonText: {
-    ...font.label,
+  presetInput: {
+    backgroundColor: colors.bg.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: 16,
+    color: colors.text.primary,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    marginBottom: spacing.md,
+  },
+  addPresetActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+  },
+  cancelButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.tertiary,
+  },
+  saveButton: {
+    backgroundColor: colors.accent.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+  },
+  saveButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.bg.primary,
+  },
+
+  // Count-in options
+  countInSection: {
+    padding: spacing.lg,
+  },
+  countInLabel: {
     fontSize: 14,
+    fontWeight: '600',
     color: colors.text.secondary,
-    letterSpacing: 2,
+    marginBottom: spacing.md,
+  },
+  countInOptions: {
+    gap: spacing.sm,
+  },
+  countInChip: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.bg.primary,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border.subtle,
+  },
+  countInChipActive: {
+    backgroundColor: colors.accent.subtle,
+    borderColor: colors.accent.primary,
+  },
+  countInChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text.secondary,
+  },
+  countInChipTextActive: {
+    color: colors.accent.primary,
+    fontWeight: '600',
   },
 
   // Chips - improved touch targets and spacing
