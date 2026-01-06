@@ -14,8 +14,10 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { useMetronome } from '../hooks/useMetronome';
+import { useShow } from '../hooks/useShow';
 import { colors, font, spacing, SUBDIVISIONS } from '../constants/theme';
 import { SettingsDrawer } from '../components/SettingsDrawer';
+import { ScoreBar } from '../components/ScoreBar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const RING_SIZE = Math.min(SCREEN_WIDTH * 0.65, 280);
@@ -54,6 +56,15 @@ export function MainScreen() {
     calibrationTap,
     getCalibrationResult,
   } = useMetronome();
+
+  const showManager = useShow();
+
+  // Handle selecting a part from ScoreBar
+  const handleSelectPart = useCallback((part: { id: string; tempo: number; beats: number }) => {
+    showManager.setActivePart(part.id);
+    setTempo(part.tempo);
+    setBeats(part.beats);
+  }, [showManager, setTempo, setBeats]);
 
   useKeepAwake();
 
@@ -268,6 +279,17 @@ export function MainScreen() {
             </View>
           </Pressable>
         </View>
+
+        {/* Score Bar - Part Navigation */}
+        {showManager.hasShow && (
+          <ScoreBar
+            showName={showManager.show.name}
+            parts={showManager.show.parts}
+            activePartId={showManager.show.activePartId}
+            onSelectPart={handleSelectPart}
+            onOpenSettings={() => setShowSettings(true)}
+          />
+        )}
 
         {/* Main Tempo Display - Hero Section */}
         <View style={styles.heroSection}>
@@ -529,6 +551,7 @@ export function MainScreen() {
         stopCalibration={stopCalibration}
         calibrationTap={calibrationTap}
         getCalibrationResult={getCalibrationResult}
+        showManager={showManager}
       />
     </View>
   );
