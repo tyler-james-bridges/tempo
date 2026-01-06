@@ -6,10 +6,13 @@
  * - setInterval runs every 25ms to check if notes need scheduling
  * - Notes are scheduled 100ms ahead using audioContext.currentTime
  * - Audio thread handles precise timing, immune to JS thread jitter
+ *
+ * KEY: Uses pre-generated AudioBuffers (like Apple's HelloMetronome) instead of
+ * real-time oscillator synthesis. This ensures every click sounds IDENTICAL.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { AudioContext, OscillatorType } from 'react-native-audio-api';
+import { AudioContext, AudioBuffer } from 'react-native-audio-api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'metronome_settings_v5';
@@ -18,57 +21,60 @@ export type SoundType = 'click' | 'beep' | 'wood' | 'cowbell';
 export type SubdivisionType = 1 | 2 | 3 | 4;
 export type AccentPattern = 0 | 1 | 2 | 3 | 4;
 
-// Bluetooth latency compensation: typical ranges
-// Wired/built-in: 0-20ms
-// Bluetooth A2DP (SBC): 100-200ms
-// Bluetooth A2DP (AAC): 120-180ms
-// Bluetooth A2DP (aptX): 70-150ms
-// Megavox and similar speakers: 150-300ms
-
 // Scheduling constants (from Chris Wilson's pattern)
 const LOOKAHEAD = 25.0;          // How often to call scheduler (ms)
 const SCHEDULE_AHEAD_TIME = 0.15; // How far ahead to schedule audio (seconds)
-const MAX_LATENCY_COMPENSATION = 0.5; // Maximum latency compensation (500ms)
 
-// Sound synthesis parameters for each sound type
+// Audio buffer constants
+const SAMPLE_RATE = 44100;
+const CLICK_DURATION = 0.025; // 25ms click duration
+
+// Sound parameters - frequency only (no real-time synthesis needed)
 interface SoundParams {
   accentFreq: number;
   normalFreq: number;
-  decay: number;
-  duration: number;
-  type: OscillatorType;
 }
 
 const SOUND_PARAMS: Record<SoundType, SoundParams> = {
-  click: {
-    accentFreq: 1200,
-    normalFreq: 800,
-    decay: 60,
-    duration: 0.03,  // Shortened to prevent overlap at fast tempos
-    type: 'sine',
-  },
-  beep: {
-    accentFreq: 880,
-    normalFreq: 660,
-    decay: 20,
-    duration: 0.04,  // Shortened to prevent overlap at fast tempos
-    type: 'sine',
-  },
-  wood: {
-    accentFreq: 400,
-    normalFreq: 320,
-    decay: 80,
-    duration: 0.03,  // Shortened to prevent overlap at fast tempos
-    type: 'triangle',
-  },
-  cowbell: {
-    accentFreq: 587,
-    normalFreq: 540,
-    decay: 25,
-    duration: 0.05,  // Shortened from 0.12 - was causing overlap at fast tempos
-    type: 'square',
-  },
+  click: { accentFreq: 1200, normalFreq: 800 },
+  beep: { accentFreq: 880, normalFreq: 660 },
+  wood: { accentFreq: 400, normalFreq: 320 },
+  cowbell: { accentFreq: 587, normalFreq: 540 },
 };
+
+/**
+ * Generate a triangle wave audio buffer (like Apple's HelloMetronome)
+ * Triangle waves have clear attack and are easy to distinguish at different pitches
+ */
+function generateClickBuffer(
+  ctx: AudioContext,
+  frequency: number,
+  volume: number
+): AudioBuffer {
+  const numSamples = Math.floor(SAMPLE_RATE * CLICK_DURATION);
+  const buffer = ctx.createBuffer(1, numSamples, SAMPLE_RATE);
+  const data = buffer.getChannelData(0);
+
+  const period = SAMPLE_RATE / frequency;
+
+  for (let i = 0; i < numSamples; i++) {
+    // Triangle wave generation
+    const phase = (i % period) / period;
+    let sample: number;
+    if (phase < 0.5) {
+      sample = 4 * phase - 1; // Rising from -1 to 1
+    } else {
+      sample = 3 - 4 * phase; // Falling from 1 to -1
+    }
+
+    // Apply envelope: quick attack, exponential decay
+    const envelope = Math.exp(-i / (numSamples * 0.3));
+
+    data[i] = sample * volume * envelope;
+  }
+
+  return buffer;
+}
 
 export function useMetronome() {
   const [tempo, setTempoState] = useState(120);
@@ -88,6 +94,14 @@ export function useMetronome() {
 
   // Audio context ref
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Pre-generated audio buffers (created once, reused for every click)
+  // This is the key to consistent sound - same buffer = identical audio every time
+  const clickBuffersRef = useRef<{
+    accent: AudioBuffer | null;
+    normal: AudioBuffer | null;
+    subdivision: AudioBuffer | null;
+  }>({ accent: null, normal: null, subdivision: null });
 
   // Scheduler state refs
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -188,6 +202,23 @@ export function useMetronome() {
     };
   }, []);
 
+  // Generate audio buffers when sound type or volume changes
+  // These buffers are reused for every click - ensuring identical sound each time
+  useEffect(() => {
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    const params = SOUND_PARAMS[soundType];
+    const vol = volume;
+
+    // Generate three buffers: accent (louder, higher pitch), normal, and subdivision (quieter)
+    clickBuffersRef.current = {
+      accent: generateClickBuffer(ctx, params.accentFreq, vol * 1.0),
+      normal: generateClickBuffer(ctx, params.normalFreq, vol * 0.8),
+      subdivision: generateClickBuffer(ctx, params.normalFreq, vol * 0.5),
+    };
+  }, [soundType, volume]);
+
   const isAccented = useCallback((beat: number) => {
     const pattern = accentPatternRef.current;
     if (pattern === 0) return beat === 1;
@@ -196,111 +227,67 @@ export function useMetronome() {
   }, [accentPattern]);
 
   /**
-   * Schedule a single click/beep at a precise time using Web Audio
-   * Creates an oscillator with envelope for each note
+   * Schedule a click at a precise time using pre-generated AudioBuffer
+   *
+   * KEY IMPROVEMENT: Uses pre-generated buffers instead of real-time oscillator synthesis.
+   * This ensures every click sounds IDENTICAL - same buffer = same audio every time.
+   * Based on Apple's HelloMetronome architecture.
    *
    * BLUETOOTH LATENCY COMPENSATION:
    * - Visual feedback fires at the scheduled "time"
    * - Audio is scheduled EARLIER by audioLatency ms so it arrives on time through BT speakers
-   * - This compensates for A2DP encoding/transmission delay (typically 100-300ms)
    */
   const scheduleNote = useCallback((time: number, beat: number, sub: number, isCountIn: boolean) => {
     const ctx = audioContextRef.current;
     if (!ctx) return;
 
     const muted = muteAudioRef.current;
-    const vol = volumeRef.current;
-    const type = soundTypeRef.current;
-    const params = SOUND_PARAMS[type];
-    const latencyCompensation = audioLatencyRef.current / 1000; // Convert ms to seconds
+    const latencyCompensation = audioLatencyRef.current / 1000;
+    const buffers = clickBuffersRef.current;
 
     // Determine if this is a main beat or subdivision
     const isMainBeat = sub === 1;
     const accented = isCountIn || (isMainBeat && isAccented(beat));
 
-    // Update visual state on main beats (schedule this for the JS thread)
-    // Visual feedback always fires at the intended "time" - no latency adjustment
+    // Update visual state on main beats
     if (isMainBeat) {
-      // Record scheduled time for latency calibration
       lastScheduledBeatTimeRef.current = time;
 
       const delay = Math.max(0, (time - ctx.currentTime) * 1000);
       setTimeout(() => {
         if (isCountIn) {
-          setCurrentBeat(beat - beatsRef.current - 1); // Negative countdown
+          setCurrentBeat(beat - beatsRef.current - 1);
         } else {
           setCurrentBeat(beat);
         }
       }, delay);
     }
 
-    // Skip audio if muted
+    // Skip audio if muted or buffers not ready
     if (muted) return;
+    if (!buffers.accent || !buffers.normal || !buffers.subdivision) return;
 
-    // BLUETOOTH LATENCY COMPENSATION:
-    // Schedule audio EARLIER by the latency amount so it arrives through BT on time
-    // Only clamp to minimum time if we would actually schedule in the past
+    // Calculate audio time with latency compensation
     const targetAudioTime = time - latencyCompensation;
     const audioTime = targetAudioTime < ctx.currentTime
       ? ctx.currentTime + 0.005
       : targetAudioTime;
 
-    // Create oscillator and gain nodes for this note
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    // Set oscillator properties
-    const freq = accented ? params.accentFreq : params.normalFreq;
-    oscillator.type = params.type;
-    oscillator.frequency.setValueAtTime(freq, audioTime);
-
-    // For cowbell, add a second oscillator for inharmonic sound
-    if (type === 'cowbell') {
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      const freq2 = accented ? 845 : 800;
-      osc2.type = 'square';
-      osc2.frequency.setValueAtTime(freq2, audioTime);
-
-      // Envelope for second oscillator
-      const attackEnd = audioTime + 0.002;
-      const peakVol = vol * (accented ? 0.5 : 0.4) * (isMainBeat ? 1 : 0.5);
-      gain2.gain.setValueAtTime(0, audioTime);
-      gain2.gain.linearRampToValueAtTime(peakVol, attackEnd);
-      gain2.gain.exponentialRampToValueAtTime(0.00001, audioTime + params.duration);
-
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(audioTime);
-      osc2.stop(audioTime + params.duration);
-
-      // Cleanup after oscillator stops
-      osc2.onEnded = () => {
-        osc2.disconnect();
-        gain2.disconnect();
-      };
+    // Select the appropriate pre-generated buffer
+    let buffer: AudioBuffer;
+    if (accented) {
+      buffer = buffers.accent;
+    } else if (isMainBeat) {
+      buffer = buffers.normal;
+    } else {
+      buffer = buffers.subdivision;
     }
 
-    // Create envelope: quick attack, exponential decay
-    const attackEnd = audioTime + 0.002;
-    const peakVol = vol * (accented ? 1.0 : 0.85) * (isMainBeat ? 1 : 0.5);
-
-    gainNode.gain.setValueAtTime(0, audioTime);
-    gainNode.gain.linearRampToValueAtTime(peakVol, attackEnd);
-    gainNode.gain.exponentialRampToValueAtTime(0.00001, audioTime + params.duration);
-
-    // Connect and play
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.start(audioTime);
-    oscillator.stop(audioTime + params.duration);
-
-    // Cleanup after oscillator stops
-    oscillator.onEnded = () => {
-      oscillator.disconnect();
-      gainNode.disconnect();
-    };
+    // Create buffer source node (cheap to create, reuses the same buffer data)
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(audioTime);
   }, [isAccented]);
 
   /**
