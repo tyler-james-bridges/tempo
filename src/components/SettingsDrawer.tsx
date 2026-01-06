@@ -14,7 +14,9 @@ import Slider from '@react-native-community/slider';
 import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS } from '../constants/theme';
 import { SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
 import { usePresets, TempoPreset } from '../hooks/usePresets';
+import { ShowHook } from '../hooks/useShow';
 import { BluetoothPanel } from './BluetoothPanel';
+import { ScorePanel } from './ScorePanel';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -48,6 +50,8 @@ interface SettingsDrawerProps {
   stopCalibration: (applyResult?: boolean) => void;
   calibrationTap: () => void;
   getCalibrationResult: () => number | null;
+  // Show/Score integration
+  showManager: ShowHook;
 }
 
 const SOUNDS: { type: SoundType; label: string; desc: string }[] = [
@@ -57,7 +61,7 @@ const SOUNDS: { type: SoundType; label: string; desc: string }[] = [
   { type: 'cowbell', label: 'Bell', desc: 'Bright' },
 ];
 
-type Tab = 'tempo' | 'sound' | 'bluetooth';
+type Tab = 'score' | 'tempo' | 'sound' | 'bluetooth';
 
 export function SettingsDrawer({
   visible,
@@ -88,6 +92,7 @@ export function SettingsDrawer({
   stopCalibration,
   calibrationTap,
   getCalibrationResult,
+  showManager,
 }: SettingsDrawerProps) {
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -185,6 +190,20 @@ export function SettingsDrawer({
         {/* Tabs */}
         <View style={styles.tabBar}>
           <Pressable
+            style={[styles.tab, activeTab === 'score' && styles.tabActive]}
+            onPress={() => setActiveTab('score')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'score' }}
+            accessibilityLabel="Score settings"
+          >
+            <Text style={[styles.tabText, activeTab === 'score' && styles.tabTextActive]}>
+              Score
+            </Text>
+            {showManager.hasShow && (
+              <View style={styles.scoreBadge} />
+            )}
+          </Pressable>
+          <Pressable
             style={[styles.tab, activeTab === 'tempo' && styles.tabActive]}
             onPress={() => setActiveTab('tempo')}
             accessibilityRole="tab"
@@ -232,6 +251,14 @@ export function SettingsDrawer({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {activeTab === 'score' && (
+            <ScorePanel
+              show={showManager}
+              currentTempo={tempo}
+              currentBeats={beats}
+            />
+          )}
+
           {activeTab === 'tempo' && (
             <>
               {/* User Presets */}
@@ -661,6 +688,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.accent.dim,
     marginLeft: 1,
+  },
+  // Score badge - small dot indicator
+  scoreBadge: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent.primary,
+    marginLeft: 4,
   },
 
   scroll: {

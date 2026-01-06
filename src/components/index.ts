@@ -2,6 +2,8 @@
 export { BeatIndicator } from './BeatIndicator';
 export { SettingsDrawer } from './SettingsDrawer';
 export { BluetoothPanel } from './BluetoothPanel';
+export { ScoreBar } from './ScoreBar';
+export { ScorePanel } from './ScorePanel';
 
 // Legacy components (kept for reference)
 export { BeatRing } from './modern/BeatRing';
