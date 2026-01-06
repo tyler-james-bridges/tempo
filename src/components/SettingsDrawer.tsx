@@ -36,8 +36,6 @@ interface SettingsDrawerProps {
   setCountInEnabled: (e: boolean) => void;
   muteAudio: boolean;
   setMuteAudio: (m: boolean) => void;
-  hapticsEnabled: boolean;
-  setHapticsEnabled: (h: boolean) => void;
   tapTempo: () => void;
   // Audio latency / Bluetooth compensation
   audioLatency: number;
@@ -78,8 +76,6 @@ export function SettingsDrawer({
   setCountInEnabled,
   muteAudio,
   setMuteAudio,
-  hapticsEnabled,
-  setHapticsEnabled,
   tapTempo,
   audioLatency,
   setAudioLatency,
@@ -473,29 +469,6 @@ export function SettingsDrawer({
                         style={[
                           styles.toggleThumb,
                           muteAudio && styles.toggleThumbActive,
-                        ]}
-                      />
-                    </View>
-                  </Pressable>
-                  <View style={styles.optionDivider} />
-                  <Pressable
-                    style={styles.optionRow}
-                    onPress={() => setHapticsEnabled(!hapticsEnabled)}
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: hapticsEnabled }}
-                    accessibilityLabel="Haptic feedback, vibrate on each beat"
-                  >
-                    <View style={styles.optionContent}>
-                      <Text style={styles.optionLabel}>Haptic Feedback</Text>
-                      <Text style={styles.optionDesc}>Vibrate on each beat</Text>
-                    </View>
-                    <View
-                      style={[styles.toggle, hapticsEnabled && styles.toggleActive]}
-                    >
-                      <View
-                        style={[
-                          styles.toggleThumb,
-                          hapticsEnabled && styles.toggleThumbActive,
                         ]}
                       />
                     </View>
