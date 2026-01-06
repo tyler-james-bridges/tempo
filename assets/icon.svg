@@ -1,0 +1,46 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#050508"/>
+
+  <!-- Outer ring -->
+  <circle cx="512" cy="512" r="380" fill="none" stroke="#1a1a1f" stroke-width="24"/>
+
+  <!-- Beat ring -->
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#2a2a32" stroke-width="16"/>
+
+  <!-- Beat indicators (4 beats) -->
+  <!-- Beat 1 - top (accent/downbeat) -->
+  <circle cx="512" cy="212" r="32" fill="#00D4FF"/>
+  <!-- Beat 2 - right -->
+  <circle cx="812" cy="512" r="24" fill="#3a3a44"/>
+  <!-- Beat 3 - bottom -->
+  <circle cx="512" cy="812" r="24" fill="#3a3a44"/>
+  <!-- Beat 4 - left -->
+  <circle cx="212" cy="512" r="24" fill="#3a3a44"/>
+
+  <!-- Center tempo display area -->
+  <circle cx="512" cy="512" r="160" fill="#0a0a0f"/>
+
+  <!-- Stylized "T" or tempo indicator -->
+  <text x="512" y="545"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="180"
+        font-weight="200"
+        fill="#ffffff"
+        text-anchor="middle">
+    T
+  </text>
+
+  <!-- Accent glow on downbeat -->
+  <circle cx="512" cy="212" r="32" fill="#00D4FF" opacity="0.3" filter="url(#glow)"/>
+
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
