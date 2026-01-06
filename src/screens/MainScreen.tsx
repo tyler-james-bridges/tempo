@@ -1,17 +1,17 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   Animated,
-  PanResponder,
   Dimensions,
   Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { useMetronome } from '../hooks/useMetronome';
 import { colors, font, spacing, SUBDIVISIONS } from '../constants/theme';
@@ -163,36 +163,44 @@ export function MainScreen() {
     }
   }, [currentBeat, isPlaying, pulseAnim, glowAnim, beatPulseAnims]);
 
-  // Gesture handling for tempo - improved responsiveness
-  const startTempo = useRef(tempo);
-  const accumulatedDelta = useRef(0);
+  // High-performance gesture handling for tempo using react-native-gesture-handler
+  // This runs on the native UI thread for instant responsiveness
+  const startTempoRef = useRef(tempo);
+  const lastTempoRef = useRef(tempo);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gs) =>
-          Math.abs(gs.dy) > 5 && Math.abs(gs.dy) > Math.abs(gs.dx),
-        onPanResponderGrant: () => {
-          startTempo.current = tempo;
-          accumulatedDelta.current = 0;
-        },
-        onPanResponderMove: (_, gs) => {
-          // Use velocity-aware sensitivity - faster swipes = bigger changes
-          const velocity = Math.abs(gs.vy);
-          const sensitivity = velocity > 1.5 ? 1.0 : velocity > 0.8 ? 0.7 : 0.4;
-          const delta = -gs.dy * sensitivity;
-          const newTempo = Math.round(startTempo.current + delta);
-          if (newTempo !== tempo) {
-            setTempo(newTempo);
-          }
-        },
-        onPanResponderRelease: () => {
-          accumulatedDelta.current = 0;
-        },
-      }),
-    [tempo, setTempo]
-  );
+  // Keep refs in sync with latest tempo value
+  useEffect(() => {
+    lastTempoRef.current = tempo;
+  }, [tempo]);
+
+  const panGesture = Gesture.Pan()
+    // Near-zero threshold for instant response
+    .activeOffsetY([-2, 2])
+    // Fail if horizontal swipe to avoid conflicts
+    .failOffsetX([-20, 20])
+    .onStart(() => {
+      startTempoRef.current = lastTempoRef.current;
+    })
+    .onUpdate((event) => {
+      // High sensitivity: 0.8 means ~0.8 BPM per pixel of movement
+      // Velocity boost: faster swipes get even more responsive
+      const velocityBoost = Math.min(Math.abs(event.velocityY) / 1000, 2);
+      const sensitivity = 0.8 + velocityBoost * 0.4;
+
+      // Negative because swipe up should increase tempo
+      const delta = -event.translationY * sensitivity;
+      const newTempo = Math.round(startTempoRef.current + delta);
+
+      // Clamp to valid range and only update if changed
+      const clampedTempo = Math.max(30, Math.min(300, newTempo));
+      if (clampedTempo !== lastTempoRef.current) {
+        lastTempoRef.current = clampedTempo;
+        setTempo(clampedTempo);
+      }
+    })
+    .minDistance(0)
+    .minPointers(1)
+    .maxPointers(1);
 
   // Cycle subdivision
   const cycleSubdivision = useCallback(() => {
@@ -235,9 +243,10 @@ export function MainScreen() {
         ]}
       />
 
-      <SafeAreaView style={styles.safe} {...panResponder.panHandlers}>
-        {/* Minimal Header */}
-        <View style={styles.header}>
+      <GestureDetector gesture={panGesture}>
+        <SafeAreaView style={styles.safe}>
+          {/* Minimal Header */}
+          <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.brandMark}>TEMPO</Text>
             <View style={[styles.statusDot, isPlaying && styles.statusDotActive]} />
@@ -485,9 +494,10 @@ export function MainScreen() {
           </View>
         </View>
 
-        {/* Subtle hint */}
-        <Text style={styles.hint}>Swipe up or down to adjust tempo</Text>
-      </SafeAreaView>
+          {/* Subtle hint */}
+          <Text style={styles.hint}>Swipe up or down to adjust tempo</Text>
+        </SafeAreaView>
+      </GestureDetector>
 
       {/* Settings drawer */}
       <SettingsDrawer
