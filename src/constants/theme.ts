@@ -185,27 +185,6 @@ export const animation = {
   },
 };
 
-// DCI/WGI standard tempos
-export const DRUMLINE_PRESETS = [
-  { bpm: 120, name: '8 to 5', desc: 'Standard march' },
-  { bpm: 132, name: '6 to 5', desc: 'Quick step' },
-  { bpm: 144, name: 'Double', desc: 'Double time' },
-  { bpm: 160, name: 'Sprint', desc: 'High energy' },
-  { bpm: 180, name: 'Burner', desc: 'Maximum' },
-];
-
-// Common show tempos
-export const SHOW_PRESETS = [
-  { bpm: 60, name: 'Ballad' },
-  { bpm: 72, name: 'Slow' },
-  { bpm: 84, name: 'Medium Slow' },
-  { bpm: 96, name: 'Medium' },
-  { bpm: 108, name: 'Medium Fast' },
-  { bpm: 120, name: 'Fast' },
-  { bpm: 138, name: 'Very Fast' },
-  { bpm: 152, name: 'Presto' },
-];
-
 // Subdivisions
 export const SUBDIVISIONS = [
   { value: 1, symbol: '𝅘𝅥', name: 'Quarter' },

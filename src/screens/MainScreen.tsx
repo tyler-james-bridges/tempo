@@ -31,6 +31,7 @@ export function MainScreen() {
     volume,
     accentPattern,
     countInEnabled,
+    countInBeats,
     isCountingIn,
     muteAudio,
     audioLatency,
@@ -45,13 +46,13 @@ export function MainScreen() {
     setVolume,
     setAccentPattern,
     setCountInEnabled,
+    setCountInBeats,
     setMuteAudio,
     setAudioLatency,
     startCalibration,
     stopCalibration,
     calibrationTap,
     getCalibrationResult,
-    tapTempo,
   } = useMetronome();
 
   useKeepAwake();
@@ -162,34 +163,36 @@ export function MainScreen() {
     }
   }, [currentBeat, isPlaying, pulseAnim, glowAnim, beatPulseAnims]);
 
-  // Gesture handling for tempo
-  const lastY = useRef(0);
+  // Gesture handling for tempo - improved responsiveness
   const startTempo = useRef(tempo);
+  const accumulatedDelta = useRef(0);
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
+        onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_, gs) =>
-          Math.abs(gs.dy) > 15 && Math.abs(gs.dy) > Math.abs(gs.dx) * 1.5,
+          Math.abs(gs.dy) > 5 && Math.abs(gs.dy) > Math.abs(gs.dx),
         onPanResponderGrant: () => {
           startTempo.current = tempo;
-          lastY.current = 0;
+          accumulatedDelta.current = 0;
         },
         onPanResponderMove: (_, gs) => {
-          const newTempo = startTempo.current + Math.round(-gs.dy * 0.5);
+          // Use velocity-aware sensitivity - faster swipes = bigger changes
+          const velocity = Math.abs(gs.vy);
+          const sensitivity = velocity > 1.5 ? 1.0 : velocity > 0.8 ? 0.7 : 0.4;
+          const delta = -gs.dy * sensitivity;
+          const newTempo = Math.round(startTempo.current + delta);
           if (newTempo !== tempo) {
             setTempo(newTempo);
           }
         },
+        onPanResponderRelease: () => {
+          accumulatedDelta.current = 0;
+        },
       }),
     [tempo, setTempo]
   );
-
-  // Handle tap tempo
-  const handleTapTempo = useCallback(() => {
-    tapTempo();
-  }, [tapTempo]);
 
   // Cycle subdivision
   const cycleSubdivision = useCallback(() => {
@@ -386,43 +389,51 @@ export function MainScreen() {
           {/* Tempo adjustment row */}
           <View style={styles.tempoAdjustRow}>
             <Pressable
-              onPress={() => setTempo(tempo - 1)}
-              onLongPress={() => setTempo(tempo - 10)}
-              delayLongPress={200}
+              onPress={() => setTempo(tempo - 10)}
               style={({ pressed }) => [
                 styles.tempoAdjustButton,
                 pressed && styles.tempoAdjustButtonPressed,
               ]}
-              accessibilityLabel="Decrease tempo"
+              accessibilityLabel="Decrease tempo by 10"
+              accessibilityRole="button"
+            >
+              <Text style={styles.tempoAdjustText}>-10</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setTempo(tempo - 1)}
+              style={({ pressed }) => [
+                styles.tempoAdjustButton,
+                pressed && styles.tempoAdjustButtonPressed,
+              ]}
+              accessibilityLabel="Decrease tempo by 1"
               accessibilityRole="button"
             >
               <Text style={styles.tempoAdjustText}>-</Text>
             </Pressable>
 
             <Pressable
-              onPress={handleTapTempo}
-              style={({ pressed }) => [
-                styles.tapTempoButton,
-                pressed && styles.tapTempoButtonPressed,
-              ]}
-              accessibilityLabel="Tap tempo"
-              accessibilityRole="button"
-            >
-              <Text style={styles.tapTempoText}>TAP</Text>
-            </Pressable>
-
-            <Pressable
               onPress={() => setTempo(tempo + 1)}
-              onLongPress={() => setTempo(tempo + 10)}
-              delayLongPress={200}
               style={({ pressed }) => [
                 styles.tempoAdjustButton,
                 pressed && styles.tempoAdjustButtonPressed,
               ]}
-              accessibilityLabel="Increase tempo"
+              accessibilityLabel="Increase tempo by 1"
               accessibilityRole="button"
             >
               <Text style={styles.tempoAdjustText}>+</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setTempo(tempo + 10)}
+              style={({ pressed }) => [
+                styles.tempoAdjustButton,
+                pressed && styles.tempoAdjustButtonPressed,
+              ]}
+              accessibilityLabel="Increase tempo by 10"
+              accessibilityRole="button"
+            >
+              <Text style={styles.tempoAdjustText}>+10</Text>
             </Pressable>
           </View>
 
@@ -496,9 +507,10 @@ export function MainScreen() {
         setAccentPattern={setAccentPattern}
         countInEnabled={countInEnabled}
         setCountInEnabled={setCountInEnabled}
+        countInBeats={countInBeats}
+        setCountInBeats={setCountInBeats}
         muteAudio={muteAudio}
         setMuteAudio={setMuteAudio}
-        tapTempo={tapTempo}
         audioLatency={audioLatency}
         setAudioLatency={setAudioLatency}
         isCalibrating={isCalibrating}
@@ -743,29 +755,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border.medium,
   },
   tempoAdjustText: {
-    fontSize: 28,
-    fontWeight: '300',
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.text.secondary,
-  },
-  tapTempoButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xxl,
-    borderRadius: 28,
-    backgroundColor: colors.bg.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.accent.dim,
-  },
-  tapTempoButtonPressed: {
-    backgroundColor: colors.accent.subtle,
-    borderColor: colors.accent.primary,
-  },
-  tapTempoText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.accent.primary,
-    letterSpacing: 2,
   },
 
   // Main Action Row
