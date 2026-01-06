@@ -4,6 +4,7 @@ export { SettingsDrawer } from './SettingsDrawer';
 export { BluetoothPanel } from './BluetoothPanel';
 export { ScoreBar } from './ScoreBar';
 export { ScorePanel } from './ScorePanel';
+export { ScoreImport } from './ScoreImport';
 
 // Legacy components (kept for reference)
 export { BeatRing } from './modern/BeatRing';

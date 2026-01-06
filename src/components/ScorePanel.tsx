@@ -3,6 +3,7 @@
  *
  * Allows setting up a show with multiple parts/movements,
  * each with their own tempo and time signature.
+ * Now with AI-powered sheet music analysis!
  */
 
 import React, { useState } from 'react';
@@ -17,6 +18,7 @@ import {
 } from 'react-native';
 import { colors, spacing, radius } from '../constants/theme';
 import { ShowHook, Part } from '../hooks/useShow';
+import { ScoreImport } from './ScoreImport';
 
 interface ScorePanelProps {
   show: ShowHook;
@@ -215,12 +217,21 @@ export function ScorePanel({ show, currentTempo, currentBeats }: ScorePanelProps
           </View>
         )}
 
+        {/* AI Import */}
+        {show.show.parts.length === 0 && !isAddingPart && (
+          <ScoreImport
+            onImportComplete={() => {
+              // Parts are auto-added by the analyzer hook
+            }}
+          />
+        )}
+
         {/* Parts List */}
         {show.show.parts.length === 0 && !isAddingPart ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No parts yet</Text>
+            <Text style={styles.emptyText}>— or —</Text>
             <Text style={styles.emptyHint}>
-              Add parts for each movement in your show
+              Manually add parts for each movement
             </Text>
           </View>
         ) : (
