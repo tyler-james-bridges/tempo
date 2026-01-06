@@ -193,7 +193,7 @@ export function useMetronome() {
     if (pattern === 0) return beat === 1;
     if (pattern === 1) return true;
     return (beat - 1) % pattern === 0;
-  }, []);
+  }, [accentPattern]);
 
   /**
    * Schedule a single click/beep at a precise time using Web Audio
@@ -239,10 +239,11 @@ export function useMetronome() {
 
     // BLUETOOTH LATENCY COMPENSATION:
     // Schedule audio EARLIER by the latency amount so it arrives through BT on time
-    // This is the key to making Bluetooth speakers work correctly
-    // We add a small buffer (5ms) to ensure we never schedule in the past
-    const minAudioTime = ctx.currentTime + 0.005;
-    const audioTime = Math.max(minAudioTime, time - latencyCompensation);
+    // Only clamp to minimum time if we would actually schedule in the past
+    const targetAudioTime = time - latencyCompensation;
+    const audioTime = targetAudioTime < ctx.currentTime
+      ? ctx.currentTime + 0.005
+      : targetAudioTime;
 
     // Create oscillator and gain nodes for this note
     const oscillator = ctx.createOscillator();
@@ -263,15 +264,21 @@ export function useMetronome() {
 
       // Envelope for second oscillator
       const attackEnd = audioTime + 0.002;
-      const peakVol = vol * (accented ? 0.4 : 0.3) * (isMainBeat ? 1 : 0.5);
+      const peakVol = vol * (accented ? 0.5 : 0.4) * (isMainBeat ? 1 : 0.5);
       gain2.gain.setValueAtTime(0, audioTime);
       gain2.gain.linearRampToValueAtTime(peakVol, attackEnd);
-      gain2.gain.exponentialRampToValueAtTime(0.001, audioTime + params.duration);
+      gain2.gain.exponentialRampToValueAtTime(0.00001, audioTime + params.duration);
 
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
       osc2.start(audioTime);
       osc2.stop(audioTime + params.duration);
+
+      // Cleanup after oscillator stops
+      osc2.onEnded = () => {
+        osc2.disconnect();
+        gain2.disconnect();
+      };
     }
 
     // Create envelope: quick attack, exponential decay
@@ -280,7 +287,7 @@ export function useMetronome() {
 
     gainNode.gain.setValueAtTime(0, audioTime);
     gainNode.gain.linearRampToValueAtTime(peakVol, attackEnd);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioTime + params.duration);
+    gainNode.gain.exponentialRampToValueAtTime(0.00001, audioTime + params.duration);
 
     // Connect and play
     oscillator.connect(gainNode);
@@ -288,6 +295,12 @@ export function useMetronome() {
 
     oscillator.start(audioTime);
     oscillator.stop(audioTime + params.duration);
+
+    // Cleanup after oscillator stops
+    oscillator.onEnded = () => {
+      oscillator.disconnect();
+      gainNode.disconnect();
+    };
   }, [isAccented]);
 
   /**
