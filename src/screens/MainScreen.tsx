@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
-import * as Haptics from 'expo-haptics';
 
 import { useMetronome } from '../hooks/useMetronome';
 import { colors, font, spacing, SUBDIVISIONS } from '../constants/theme';
@@ -34,7 +33,6 @@ export function MainScreen() {
     countInEnabled,
     isCountingIn,
     muteAudio,
-    hapticsEnabled,
     audioLatency,
     isCalibrating,
     calibrationTapCount,
@@ -48,7 +46,6 @@ export function MainScreen() {
     setAccentPattern,
     setCountInEnabled,
     setMuteAudio,
-    setHapticsEnabled,
     setAudioLatency,
     startCalibration,
     stopCalibration,
@@ -178,9 +175,6 @@ export function MainScreen() {
         onPanResponderGrant: () => {
           startTempo.current = tempo;
           lastY.current = 0;
-          if (hapticsEnabled) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
         },
         onPanResponderMove: (_, gs) => {
           const newTempo = startTempo.current + Math.round(-gs.dy * 0.5);
@@ -189,34 +183,25 @@ export function MainScreen() {
           }
         },
       }),
-    [tempo, setTempo, hapticsEnabled]
+    [tempo, setTempo]
   );
 
-  // Handle tap tempo with haptic
+  // Handle tap tempo
   const handleTapTempo = useCallback(() => {
-    if (hapticsEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
     tapTempo();
-  }, [tapTempo, hapticsEnabled]);
+  }, [tapTempo]);
 
   // Cycle subdivision
   const cycleSubdivision = useCallback(() => {
-    if (hapticsEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
     const nextSub = subdivision === 4 ? 1 : (subdivision + 1) as 1 | 2 | 3 | 4;
     setSubdivision(nextSub);
-  }, [subdivision, setSubdivision, hapticsEnabled]);
+  }, [subdivision, setSubdivision]);
 
   // Cycle time signature
   const cycleTimeSignature = useCallback(() => {
-    if (hapticsEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
     const nextBeats = beats >= 7 ? 2 : beats + 1;
     setBeats(nextBeats);
-  }, [beats, setBeats, hapticsEnabled]);
+  }, [beats, setBeats]);
 
   // Count-in display
   const displayTempo = isCountingIn ? Math.abs(currentBeat) : tempo;
@@ -401,14 +386,8 @@ export function MainScreen() {
           {/* Tempo adjustment row */}
           <View style={styles.tempoAdjustRow}>
             <Pressable
-              onPress={() => {
-                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setTempo(tempo - 1);
-              }}
-              onLongPress={() => {
-                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setTempo(tempo - 10);
-              }}
+              onPress={() => setTempo(tempo - 1)}
+              onLongPress={() => setTempo(tempo - 10)}
               delayLongPress={200}
               style={({ pressed }) => [
                 styles.tempoAdjustButton,
@@ -433,14 +412,8 @@ export function MainScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => {
-                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setTempo(tempo + 1);
-              }}
-              onLongPress={() => {
-                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setTempo(tempo + 10);
-              }}
+              onPress={() => setTempo(tempo + 1)}
+              onLongPress={() => setTempo(tempo + 10)}
               delayLongPress={200}
               style={({ pressed }) => [
                 styles.tempoAdjustButton,
@@ -456,10 +429,7 @@ export function MainScreen() {
           {/* Main action row */}
           <View style={styles.mainActionRow}>
             <Pressable
-              onPress={() => {
-                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setCountInEnabled(!countInEnabled);
-              }}
+              onPress={() => setCountInEnabled(!countInEnabled)}
               style={({ pressed }) => [
                 styles.secondaryButton,
                 countInEnabled && styles.secondaryButtonActive,
@@ -478,10 +448,7 @@ export function MainScreen() {
 
             {/* Main Play/Stop Button */}
             <Pressable
-              onPress={() => {
-                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                toggle();
-              }}
+              onPress={toggle}
               style={({ pressed }) => [
                 styles.playButton,
                 isPlaying && styles.playButtonActive,
@@ -531,8 +498,6 @@ export function MainScreen() {
         setCountInEnabled={setCountInEnabled}
         muteAudio={muteAudio}
         setMuteAudio={setMuteAudio}
-        hapticsEnabled={hapticsEnabled}
-        setHapticsEnabled={setHapticsEnabled}
         tapTempo={tapTempo}
         audioLatency={audioLatency}
         setAudioLatency={setAudioLatency}
