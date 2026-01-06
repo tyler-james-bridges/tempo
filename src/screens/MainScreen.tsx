@@ -34,6 +34,7 @@ export function MainScreen() {
     countInEnabled,
     isCountingIn,
     muteAudio,
+    hapticsEnabled,
     audioLatency,
     isCalibrating,
     calibrationTapCount,
@@ -47,6 +48,7 @@ export function MainScreen() {
     setAccentPattern,
     setCountInEnabled,
     setMuteAudio,
+    setHapticsEnabled,
     setAudioLatency,
     startCalibration,
     stopCalibration,
@@ -176,7 +178,9 @@ export function MainScreen() {
         onPanResponderGrant: () => {
           startTempo.current = tempo;
           lastY.current = 0;
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (hapticsEnabled) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
         },
         onPanResponderMove: (_, gs) => {
           const newTempo = startTempo.current + Math.round(-gs.dy * 0.5);
@@ -185,28 +189,34 @@ export function MainScreen() {
           }
         },
       }),
-    [tempo, setTempo]
+    [tempo, setTempo, hapticsEnabled]
   );
 
   // Handle tap tempo with haptic
   const handleTapTempo = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     tapTempo();
-  }, [tapTempo]);
+  }, [tapTempo, hapticsEnabled]);
 
   // Cycle subdivision
   const cycleSubdivision = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const nextSub = subdivision === 4 ? 1 : (subdivision + 1) as 1 | 2 | 3 | 4;
     setSubdivision(nextSub);
-  }, [subdivision, setSubdivision]);
+  }, [subdivision, setSubdivision, hapticsEnabled]);
 
   // Cycle time signature
   const cycleTimeSignature = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const nextBeats = beats >= 7 ? 2 : beats + 1;
     setBeats(nextBeats);
-  }, [beats, setBeats]);
+  }, [beats, setBeats, hapticsEnabled]);
 
   // Count-in display
   const displayTempo = isCountingIn ? Math.abs(currentBeat) : tempo;
@@ -392,11 +402,11 @@ export function MainScreen() {
           <View style={styles.tempoAdjustRow}>
             <Pressable
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setTempo(tempo - 1);
               }}
               onLongPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setTempo(tempo - 10);
               }}
               delayLongPress={200}
@@ -424,11 +434,11 @@ export function MainScreen() {
 
             <Pressable
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setTempo(tempo + 1);
               }}
               onLongPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setTempo(tempo + 10);
               }}
               delayLongPress={200}
@@ -447,7 +457,7 @@ export function MainScreen() {
           <View style={styles.mainActionRow}>
             <Pressable
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setCountInEnabled(!countInEnabled);
               }}
               style={({ pressed }) => [
@@ -469,7 +479,7 @@ export function MainScreen() {
             {/* Main Play/Stop Button */}
             <Pressable
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                 toggle();
               }}
               style={({ pressed }) => [
@@ -521,6 +531,8 @@ export function MainScreen() {
         setCountInEnabled={setCountInEnabled}
         muteAudio={muteAudio}
         setMuteAudio={setMuteAudio}
+        hapticsEnabled={hapticsEnabled}
+        setHapticsEnabled={setHapticsEnabled}
         tapTempo={tapTempo}
         audioLatency={audioLatency}
         setAudioLatency={setAudioLatency}
