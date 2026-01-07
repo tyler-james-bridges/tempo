@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import type { CloudShow } from "@tempo/shared";
@@ -80,7 +81,6 @@ export default function DashboardPage() {
     setUploading(true);
 
     try {
-      // Upload via API route
       const formData = new FormData();
       formData.append("file", file);
 
@@ -95,7 +95,6 @@ export default function DashboardPage() {
         throw new Error(result.error || "Upload failed");
       }
 
-      // Add to local state
       setShows((prev) => [result.show, ...prev]);
     } catch (error) {
       alert(
@@ -113,79 +112,94 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "ready":
-        return "text-green-400 bg-green-400/10";
+        return "badge badge-ready";
       case "processing":
-        return "text-yellow-400 bg-yellow-400/10";
+        return "badge badge-processing";
       case "error":
-        return "text-red-400 bg-red-400/10";
+        return "badge badge-error";
       default:
-        return "text-white/60 bg-white/5";
+        return "badge badge-pending";
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white/60">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9]">
+        <div className="text-[#5C5C5C]">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col bg-[#FAFAF9]">
       {/* Header */}
-      <header className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-[#00e5ff]">Tempo</span>
-            <span className="text-sm text-white/60">Cloud</span>
-          </div>
+      <header className="border-b border-[#E8E8E6] bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E8913A] flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+              </svg>
+            </div>
+            <span className="text-xl font-bold tracking-tight text-[#1A1A1A]">Tempo</span>
+          </Link>
+
           <div className="flex items-center gap-4">
-            <span className="text-white/60 text-sm">{user?.email}</span>
+            <span className="text-[#5C5C5C] text-sm hidden sm:block">{user?.email}</span>
+            <Link
+              href="/settings"
+              className="text-[#5C5C5C] hover:text-[#1A1A1A] text-sm transition-colors"
+            >
+              Settings
+            </Link>
             <button
               onClick={handleSignOut}
-              className="text-white/60 hover:text-white text-sm transition"
+              className="text-[#5C5C5C] hover:text-[#1A1A1A] text-sm transition-colors"
             >
-              Sign Out
+              Log out
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-10">
+      <main className="flex-1 max-w-6xl mx-auto px-6 py-8 w-full">
+        {/* Page Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Your Shows</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-[#1A1A1A]">Your Shows</h1>
+            <p className="text-[#5C5C5C] text-sm mt-1">{shows.length} show{shows.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
 
         {/* Upload Zone */}
         <div
-          className={`border-2 border-dashed rounded-2xl p-10 mb-10 text-center transition-colors ${
-            dragActive
-              ? "border-[#00e5ff] bg-[#00e5ff]/5"
-              : "border-white/20 hover:border-white/40"
-          }`}
+          className={`upload-zone p-10 mb-8 text-center ${dragActive ? "active" : ""}`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
           {uploading ? (
-            <div className="text-white/60">
-              <div className="animate-spin w-8 h-8 border-2 border-[#00e5ff] border-t-transparent rounded-full mx-auto mb-4" />
-              Uploading...
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-[#E8913A] border-t-transparent rounded-full animate-spin" />
+              <p className="text-[#5C5C5C]">Processing PDF...</p>
             </div>
           ) : (
             <>
-              <div className="text-4xl mb-4">📄</div>
-              <p className="text-lg font-medium mb-2">
-                Drag & drop your sheet music PDF
+              <div className="w-14 h-14 rounded-2xl bg-[#E8913A]/10 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 text-[#E8913A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <p className="text-base font-medium mb-1 text-[#1A1A1A]">
+                Drop your sheet music PDF here
               </p>
-              <p className="text-white/60 text-sm mb-4">or</p>
-              <label className="inline-block bg-[#00e5ff] text-black px-6 py-2 rounded-lg font-medium cursor-pointer hover:bg-[#00e5ff]/90 transition">
-                Browse Files
+              <p className="text-[#5C5C5C] text-sm mb-4">or</p>
+              <label className="btn-primary cursor-pointer text-sm">
+                Browse files
                 <input
                   type="file"
                   accept=".pdf"
@@ -193,8 +207,8 @@ export default function DashboardPage() {
                   className="hidden"
                 />
               </label>
-              <p className="text-white/40 text-xs mt-4">
-                PDF files up to 50MB supported
+              <p className="text-[#8C8C8C] text-xs mt-4">
+                PDF files up to 50MB
               </p>
             </>
           )}
@@ -202,39 +216,43 @@ export default function DashboardPage() {
 
         {/* Shows List */}
         {shows.length === 0 ? (
-          <div className="text-center py-20 text-white/40">
-            <p className="text-lg">No shows yet</p>
-            <p className="text-sm mt-2">
-              Upload a sheet music PDF to get started
+          <div className="card p-12 text-center">
+            <p className="text-[#5C5C5C]">No shows yet</p>
+            <p className="text-[#8C8C8C] text-sm mt-1">
+              Upload a PDF to get started
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-3">
             {shows.map((show) => (
               <div
                 key={show.id}
-                className="bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/[0.07] transition cursor-pointer"
+                className="card card-interactive p-4 flex items-center justify-between"
                 onClick={() => router.push(`/shows/${show.id}`)}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-[#F5F4F2] flex items-center justify-center">
+                    <svg className="w-5 h-5 text-[#5C5C5C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                  </div>
                   <div>
-                    <h3 className="text-lg font-semibold">{show.name}</h3>
-                    <p className="text-white/40 text-sm mt-1">
+                    <h3 className="font-medium text-[#1A1A1A]">{show.name}</h3>
+                    <p className="text-[#8C8C8C] text-sm">
                       {show.source_filename || "Manual entry"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        show.status
-                      )}`}
-                    >
-                      {show.status}
-                    </span>
-                    <span className="text-white/40 text-sm">
-                      {new Date(show.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={getStatusBadge(show.status)}>
+                    {show.status}
+                  </span>
+                  <span className="text-[#8C8C8C] text-sm">
+                    {new Date(show.created_at).toLocaleDateString()}
+                  </span>
+                  <svg className="w-4 h-4 text-[#8C8C8C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </div>
             ))}
