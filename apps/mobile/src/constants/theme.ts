@@ -1,45 +1,52 @@
 /**
- * Tempo Drumline - 2026 Design System
+ * TempoMap - 2026 Design System
  * Ultra-minimal, clean, professional - App Store Premium Quality
  *
  * Design Philosophy:
  * - The tempo IS the interface
  * - Generous negative space for visual breathing room
- * - Single accent color, maximum impact
+ * - Single accent color (Deep Marigold), maximum impact
  * - Typography-first design with clear hierarchy
  * - Gesture-driven interactions
  * - WCAG AA+ accessibility compliant
  * - Minimum 44px touch targets (iOS HIG)
  * - Consistent spacing using 4px/8px grid
+ *
+ * Design aligned with TempoMap web app for brand consistency
  */
 
-// Primary accent - electric cyan with excellent contrast on dark
-const ACCENT = '#00E5FF';
+// Primary accent - Deep Marigold (matches web app)
+const ACCENT = '#E8913A';
+const ACCENT_HOVER = '#D4822E';
+const ACCENT_ACTIVE = '#C67520';
 
 export const colors = {
   // Pure blacks for OLED displays - saves battery, looks premium
   bg: {
     primary: '#000000',
-    elevated: '#0C0C0C',
-    surface: '#161616',
+    elevated: '#0A0A0A',
+    surface: '#141414',
     card: '#1A1A1A',          // For cards/panels needing more contrast
-    overlay: 'rgba(0, 0, 0, 0.9)',
+    overlay: 'rgba(0, 0, 0, 0.85)',
   },
 
-  // Accent - used sparingly for maximum visual impact
+  // Accent - Deep Marigold, used sparingly for maximum visual impact
   accent: {
     primary: ACCENT,
-    bright: '#33EBFF',        // For hover/pressed states
-    dim: 'rgba(0, 229, 255, 0.5)',
-    glow: 'rgba(0, 229, 255, 0.12)',
-    subtle: 'rgba(0, 229, 255, 0.06)',
+    hover: ACCENT_HOVER,      // For pressed states
+    active: ACCENT_ACTIVE,    // For active/selected states
+    bright: '#F5A04D',        // Lighter variant for highlights
+    dim: 'rgba(232, 145, 58, 0.6)',
+    glow: 'rgba(232, 145, 58, 0.15)',
+    subtle: 'rgba(232, 145, 58, 0.08)',
+    muted: 'rgba(232, 145, 58, 0.12)', // Matches web --accent-primary-muted
   },
 
-  // Active/Playing state - warm orange pulse
+  // Active/Playing state - uses same marigold for consistency
   active: {
-    primary: '#FF5722',
-    bright: '#FF7043',
-    glow: 'rgba(255, 87, 34, 0.18)',
+    primary: ACCENT,
+    bright: '#F5A04D',
+    glow: 'rgba(232, 145, 58, 0.2)',
   },
 
   // Text hierarchy - WCAG AA compliant contrast ratios
@@ -48,6 +55,7 @@ export const colors = {
     secondary: 'rgba(255, 255, 255, 0.87)', // 15:1 contrast - body text
     tertiary: 'rgba(255, 255, 255, 0.6)',   // 9:1 contrast - labels, meta
     disabled: 'rgba(255, 255, 255, 0.38)',  // 5:1 contrast - decorative only
+    muted: 'rgba(255, 255, 255, 0.5)',      // Additional muted state
   },
 
   // Borders - subtle but visible for separation
@@ -64,10 +72,13 @@ export const colors = {
     accent: '#FFFFFF',
   },
 
-  // Semantic colors - clear visual feedback
-  success: '#00E676',
-  warning: '#FFB300',
-  error: '#FF5252',
+  // Semantic colors - clear visual feedback (aligned with web)
+  success: '#16A34A',
+  successMuted: 'rgba(22, 163, 74, 0.15)',
+  warning: '#CA8A04',
+  warningMuted: 'rgba(202, 138, 4, 0.15)',
+  error: '#DC2626',
+  errorMuted: 'rgba(220, 38, 38, 0.15)',
 };
 
 // Spacing based on 4px grid - use consistently throughout the app

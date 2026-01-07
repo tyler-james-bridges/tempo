@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Auth form
+  // Auth form - matches web's login page design
   authContainer: {
     paddingVertical: spacing.xl,
     gap: spacing.md,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: colors.accent.primary,
+    color: colors.text.primary,
     textAlign: "center",
   },
   subtitle: {
@@ -259,22 +259,31 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: "center",
     marginBottom: spacing.md,
+    lineHeight: 20,
   },
+  // Input style matching web's .input class
   input: {
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border.medium,
     padding: spacing.md,
     fontSize: 16,
     color: colors.text.primary,
   },
+  // Primary button style matching web btn-primary
   authButton: {
     backgroundColor: colors.accent.primary,
     paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: 8,
     alignItems: "center",
     marginTop: spacing.sm,
+    // Shadow like web btn-primary
+    shadowColor: colors.accent.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
   },
   authButtonDisabled: {
     opacity: 0.7,
@@ -282,7 +291,7 @@ const styles = StyleSheet.create({
   authButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.bg.primary,
+    color: "#FFFFFF",
   },
   switchText: {
     fontSize: 14,
@@ -295,6 +304,10 @@ const styles = StyleSheet.create({
     color: colors.error,
     textAlign: "center",
     marginTop: spacing.sm,
+    backgroundColor: colors.errorMuted,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 6,
   },
 
   // Header
@@ -303,6 +316,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
   },
   userEmail: {
     fontSize: 13,
@@ -333,11 +349,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: colors.text.tertiary,
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
   refreshBtn: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
+    backgroundColor: colors.accent.muted,
+    borderRadius: 6,
   },
   refreshText: {
     fontSize: 13,
@@ -345,10 +363,14 @@ const styles = StyleSheet.create({
     color: colors.accent.primary,
   },
 
-  // Empty state
+  // Empty state - matches web's empty card pattern
   empty: {
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.xxl,
     alignItems: "center",
+    backgroundColor: colors.bg.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   emptyText: {
     fontSize: 15,
@@ -362,19 +384,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Shows list
+  // Shows list - card-interactive style matching web
   showsList: {
     flex: 1,
   },
   showCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
+    backgroundColor: colors.bg.card,
+    borderRadius: 12,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border.subtle,
     marginBottom: spacing.sm,
+    // Card shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   showInfo: {
     flex: 1,
@@ -386,14 +414,15 @@ const styles = StyleSheet.create({
   },
   showMeta: {
     fontSize: 13,
-    color: colors.text.secondary,
+    color: colors.text.muted,
     marginTop: 2,
   },
+  // Badge style matching web's badge pattern
   importBadge: {
-    backgroundColor: colors.accent.subtle,
+    backgroundColor: colors.accent.muted,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: 6,
   },
   importBadgeText: {
     fontSize: 12,
