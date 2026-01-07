@@ -14,6 +14,8 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { colors, spacing, radius } from "../constants/theme";
 import { useAuth, useCloudSync, ShowHook, SyncedShowHook } from "../hooks";
@@ -105,58 +107,68 @@ export function CloudShowsPanel({ show, onClose }: CloudShowsPanelProps) {
   // Not authenticated - show login form
   if (!auth.isAuthenticated) {
     return (
-      <View style={styles.container}>
-        <View style={styles.authContainer}>
-          <Text style={styles.title}>Tempo Cloud</Text>
-          <Text style={styles.subtitle}>
-            Sign in to sync shows from the web app
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email"
-            placeholderTextColor={colors.text.disabled}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoCorrect={false}
-          />
-
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor={colors.text.disabled}
-            secureTextEntry
-          />
-
-          <Pressable
-            style={[styles.authButton, authLoading && styles.authButtonDisabled]}
-            onPress={handleAuth}
-            disabled={authLoading}
-          >
-            {authLoading ? (
-              <ActivityIndicator color={colors.bg.primary} />
-            ) : (
-              <Text style={styles.authButtonText}>
-                {isSignUp ? "Create Account" : "Sign In"}
-              </Text>
-            )}
-          </Pressable>
-
-          <Pressable onPress={() => setIsSignUp(!isSignUp)}>
-            <Text style={styles.switchText}>
-              {isSignUp
-                ? "Already have an account? Sign In"
-                : "Don't have an account? Sign Up"}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 120 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.authScrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.authContainer}>
+            <Text style={styles.title}>Tempo Cloud</Text>
+            <Text style={styles.subtitle}>
+              Sign in to sync shows from the web app
             </Text>
-          </Pressable>
 
-          {auth.error && <Text style={styles.errorText}>{auth.error}</Text>}
-        </View>
-      </View>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Email"
+              placeholderTextColor={colors.text.disabled}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoCorrect={false}
+            />
+
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor={colors.text.disabled}
+              secureTextEntry
+            />
+
+            <Pressable
+              style={[styles.authButton, authLoading && styles.authButtonDisabled]}
+              onPress={handleAuth}
+              disabled={authLoading}
+            >
+              {authLoading ? (
+                <ActivityIndicator color={colors.bg.primary} />
+              ) : (
+                <Text style={styles.authButtonText}>
+                  {isSignUp ? "Create Account" : "Sign In"}
+                </Text>
+              )}
+            </Pressable>
+
+            <Pressable onPress={() => setIsSignUp(!isSignUp)}>
+              <Text style={styles.switchText}>
+                {isSignUp
+                  ? "Already have an account? Sign In"
+                  : "Don't have an account? Sign Up"}
+              </Text>
+            </Pressable>
+
+            {auth.error && <Text style={styles.errorText}>{auth.error}</Text>}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -244,6 +256,10 @@ const styles = StyleSheet.create({
   },
 
   // Auth form - matches web's login page design
+  authScrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing.xxl,
+  },
   authContainer: {
     paddingVertical: spacing.xl,
     gap: spacing.md,

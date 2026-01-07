@@ -69,6 +69,13 @@ export function MainScreen() {
   useKeepAwake();
 
   const [showSettings, setShowSettings] = useState(false);
+  const [initialSettingsTab, setInitialSettingsTab] = useState<'score' | 'tempo' | 'sound' | 'bluetooth' | 'cloud'>('tempo');
+
+  // Helper to open settings with a specific tab
+  const openSettings = useCallback((tab: 'score' | 'tempo' | 'sound' | 'bluetooth' | 'cloud' = 'tempo') => {
+    setInitialSettingsTab(tab);
+    setShowSettings(true);
+  }, []);
 
   // Animated values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -407,7 +414,7 @@ export function MainScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => setShowSettings(true)}
+            onPress={() => openSettings('sound')}
             style={({ pressed }) => [
               styles.quickSettingButton,
               pressed && styles.pressed,
@@ -532,6 +539,7 @@ export function MainScreen() {
       <SettingsDrawer
         visible={showSettings}
         onClose={() => setShowSettings(false)}
+        initialTab={initialSettingsTab}
         tempo={tempo}
         setTempo={setTempo}
         beats={beats}

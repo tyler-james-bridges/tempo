@@ -1,0 +1,11 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- TempoMap App Icon - matches web app logo -->
+
+  <!-- Marigold background with rounded corners -->
+  <rect width="1024" height="1024" rx="220" fill="#E8913A"/>
+
+  <!-- White music note (same SVG path as web app, scaled to fit) -->
+  <g transform="translate(256, 192) scale(21.33)">
+    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" fill="white"/>
+  </g>
+</svg>
