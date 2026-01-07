@@ -2,16 +2,13 @@ import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-// Lazy-init admin client to avoid build-time errors
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+// Admin client for storage operations (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: NextRequest) {
-  const supabaseAdmin = getSupabaseAdmin();
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -44,7 +41,7 @@ export async function POST(request: NextRequest) {
     const filePath = `${user.id}/${timestamp}_${safeName}`;
 
     // Upload to Supabase Storage using admin client (bypasses RLS)
-    const { error: uploadError } = await supabaseAdmin.storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from("pdfs")
       .upload(filePath, file, {
         contentType: "application/pdf",

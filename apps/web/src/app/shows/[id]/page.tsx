@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -41,7 +41,11 @@ export default function ShowDetailPage() {
   const [newPartTempo, setNewPartTempo] = useState(120);
   const [newPartBeats, setNewPartBeats] = useState(4);
 
-  const loadShow = useCallback(async () => {
+  useEffect(() => {
+    loadShow();
+  }, [showId]);
+
+  const loadShow = async () => {
     const supabase = createClient();
 
     const { data: showData, error: showError } = await supabase
@@ -65,11 +69,7 @@ export default function ShowDetailPage() {
 
     setParts(partsData || []);
     setLoading(false);
-  }, [showId, router]);
-
-  useEffect(() => {
-    loadShow();
-  }, [loadShow]);
+  };
 
   const addPart = async () => {
     if (!newPartName.trim()) return;
