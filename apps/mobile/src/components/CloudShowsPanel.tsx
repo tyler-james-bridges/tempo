@@ -16,10 +16,10 @@ import {
   ScrollView,
 } from "react-native";
 import { colors, spacing, radius } from "../constants/theme";
-import { useAuth, useCloudSync, ShowHook } from "../hooks";
+import { useAuth, useCloudSync, ShowHook, SyncedShowHook } from "../hooks";
 
 interface CloudShowsPanelProps {
-  show: ShowHook;
+  show: ShowHook | SyncedShowHook;
   onClose: () => void;
 }
 
@@ -64,31 +64,28 @@ export function CloudShowsPanel({ show, onClose }: CloudShowsPanelProps) {
           { text: "Cancel", style: "cancel" },
           {
             text: "Replace",
-            onPress: () => importShow(showId),
+            onPress: () => doImportShow(showId),
           },
         ]
       );
     } else {
-      importShow(showId);
+      doImportShow(showId);
     }
   };
 
-  const importShow = async (showId: string) => {
+  const doImportShow = async (showId: string) => {
     setImportingShowId(showId);
 
     const localShow = await cloudSync.fetchShowWithParts(showId);
 
     if (localShow) {
-      // Clear current show and set the new one
-      show.clearShow();
-      show.setShowName(localShow.name);
+      // Import the show with cloud link preserved
+      show.importShow(localShow);
 
-      // Add all parts
-      for (const part of localShow.parts) {
-        show.addPart(part.name, part.tempo, part.beats);
-      }
-
-      Alert.alert("Success", `Imported "${localShow.name}" with ${localShow.parts.length} parts`);
+      Alert.alert(
+        "Success",
+        `Imported "${localShow.name}" with ${localShow.parts.length} parts.\n\nChanges will sync between mobile and web.`
+      );
       onClose();
     } else {
       Alert.alert("Error", "Failed to import show");

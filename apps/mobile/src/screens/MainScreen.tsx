@@ -14,7 +14,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { useMetronome } from '../hooks/useMetronome';
-import { useShow } from '../hooks/useShow';
+import { useSyncedShow } from '../hooks/useSyncedShow';
 import { colors, font, spacing, SUBDIVISIONS } from '../constants/theme';
 import { SettingsDrawer } from '../components/SettingsDrawer';
 import { ScoreBar } from '../components/ScoreBar';
@@ -57,7 +57,7 @@ export function MainScreen() {
     getCalibrationResult,
   } = useMetronome();
 
-  const showManager = useShow();
+  const showManager = useSyncedShow();
 
   // Handle selecting a part from ScoreBar
   const handleSelectPart = useCallback((part: { id: string; tempo: number; beats: number }) => {

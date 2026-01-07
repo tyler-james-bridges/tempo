@@ -21,12 +21,14 @@ export interface Show {
   name: string;
   parts: Part[];
   activePartId: string | null;
+  cloudShowId?: string | null; // Link to Supabase show for two-way sync
 }
 
 const DEFAULT_SHOW: Show = {
   name: '',
   parts: [],
   activePartId: null,
+  cloudShowId: null,
 };
 
 // Generate unique ID
@@ -151,6 +153,16 @@ export function useShow() {
     setShow(DEFAULT_SHOW);
   }, []);
 
+  // Set cloud show ID (link to cloud)
+  const setCloudShowId = useCallback((cloudShowId: string | null) => {
+    setShow((prev) => ({ ...prev, cloudShowId }));
+  }, []);
+
+  // Import a complete show (used for cloud sync)
+  const importShow = useCallback((importedShow: Show) => {
+    setShow(importedShow);
+  }, []);
+
   // Check if show has content
   const hasShow = show.name.length > 0 || show.parts.length > 0;
 
@@ -164,6 +176,11 @@ export function useShow() {
     // Show operations
     setShowName,
     clearShow,
+    importShow,
+
+    // Cloud sync
+    setCloudShowId,
+    isCloudSynced: !!show.cloudShowId,
 
     // Part operations
     addPart,

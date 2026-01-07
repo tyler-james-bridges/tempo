@@ -15,6 +15,7 @@ import { colors, font, spacing, radius, SUBDIVISIONS, TIME_SIGS } from '../const
 import { SoundType, SubdivisionType, AccentPattern } from '../hooks/useMetronome';
 import { usePresets, TempoPreset } from '../hooks/usePresets';
 import { ShowHook } from '../hooks/useShow';
+import { SyncedShowHook } from '../hooks/useSyncedShow';
 import { BluetoothPanel } from './BluetoothPanel';
 import { ScorePanel } from './ScorePanel';
 import { CloudShowsPanel } from './CloudShowsPanel';
@@ -52,7 +53,7 @@ interface SettingsDrawerProps {
   calibrationTap: () => void;
   getCalibrationResult: () => number | null;
   // Show/Score integration
-  showManager: ShowHook;
+  showManager: ShowHook | SyncedShowHook;
 }
 
 const SOUNDS: { type: SoundType; label: string; desc: string }[] = [

@@ -17,9 +17,10 @@ import {
 } from 'react-native';
 import { colors, spacing, radius } from '../constants/theme';
 import { ShowHook, Part } from '../hooks/useShow';
+import { SyncedShowHook } from '../hooks/useSyncedShow';
 
 interface ScorePanelProps {
-  show: ShowHook;
+  show: ShowHook | SyncedShowHook;
   currentTempo: number;
   currentBeats: number;
 }
@@ -30,6 +31,9 @@ export function ScorePanel({ show, currentTempo, currentBeats }: ScorePanelProps
   const [newPartName, setNewPartName] = useState('');
   const [newPartTempo, setNewPartTempo] = useState(currentTempo);
   const [newPartBeats, setNewPartBeats] = useState(currentBeats);
+
+  // Check if this is a synced show
+  const isCloudSynced = 'isCloudSynced' in show && show.isCloudSynced;
 
   const handleAddPart = () => {
     show.addPart(newPartName || `Part ${show.show.parts.length + 1}`, newPartTempo, newPartBeats);
@@ -100,7 +104,14 @@ export function ScorePanel({ show, currentTempo, currentBeats }: ScorePanelProps
     <View style={styles.container}>
       {/* Show Name */}
       <View style={styles.section}>
-        <Text style={styles.label}>SHOW NAME</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>SHOW NAME</Text>
+          {isCloudSynced && (
+            <View style={styles.cloudBadge}>
+              <Text style={styles.cloudBadgeText}>CLOUD SYNCED</Text>
+            </View>
+          )}
+        </View>
         <TextInput
           style={styles.input}
           value={show.show.name}
@@ -277,11 +288,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   label: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.text.tertiary,
     letterSpacing: 1.5,
+  },
+  cloudBadge: {
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  cloudBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.bg.primary,
+    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: colors.bg.surface,

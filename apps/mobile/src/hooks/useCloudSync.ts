@@ -64,7 +64,17 @@ function cloudToLocalShow(cloudShow: CloudShow, cloudParts: CloudPart[]): Show {
     name: cloudShow.name,
     parts,
     activePartId: parts[0]?.id ?? null,
+    cloudShowId: cloudShow.id, // Keep the cloud link
   };
+}
+
+/**
+ * Part input for creating/updating
+ */
+interface PartInput {
+  name: string;
+  tempo: number;
+  beats: number;
 }
 
 export function useCloudSync(userId: string | null) {
@@ -222,6 +232,141 @@ export function useCloudSync(userId: string | null) {
   // Get only ready shows (processed and available)
   const readyShows = state.shows.filter((s) => s.status === "ready");
 
+  // ============================================
+  // WRITE OPERATIONS (Two-way sync)
+  // ============================================
+
+  // Create a new part in the cloud
+  const createCloudPart = useCallback(
+    async (showId: string, part: PartInput): Promise<string | null> => {
+      if (!userId) return null;
+
+      try {
+        // Get current max position
+        const { data: existingParts } = await supabase
+          .from("parts")
+          .select("position")
+          .eq("show_id", showId)
+          .order("position", { ascending: false })
+          .limit(1);
+
+        const nextPosition = (existingParts?.[0]?.position ?? -1) + 1;
+
+        const { data, error } = await supabase
+          .from("parts")
+          .insert({
+            show_id: showId,
+            name: part.name,
+            tempo: part.tempo,
+            beats: part.beats,
+            position: nextPosition,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        console.log("Created cloud part:", data.id);
+        return data.id;
+      } catch (err) {
+        console.error("Failed to create cloud part:", err);
+        return null;
+      }
+    },
+    [userId]
+  );
+
+  // Update an existing part in the cloud
+  const updateCloudPart = useCallback(
+    async (partId: string, updates: Partial<PartInput>): Promise<boolean> => {
+      if (!userId) return false;
+
+      try {
+        const { error } = await supabase
+          .from("parts")
+          .update({
+            ...(updates.name !== undefined && { name: updates.name }),
+            ...(updates.tempo !== undefined && { tempo: updates.tempo }),
+            ...(updates.beats !== undefined && { beats: updates.beats }),
+          })
+          .eq("id", partId);
+
+        if (error) throw error;
+        console.log("Updated cloud part:", partId);
+        return true;
+      } catch (err) {
+        console.error("Failed to update cloud part:", err);
+        return false;
+      }
+    },
+    [userId]
+  );
+
+  // Delete a part from the cloud
+  const deleteCloudPart = useCallback(
+    async (partId: string): Promise<boolean> => {
+      if (!userId) return false;
+
+      try {
+        const { error } = await supabase
+          .from("parts")
+          .delete()
+          .eq("id", partId);
+
+        if (error) throw error;
+        console.log("Deleted cloud part:", partId);
+        return true;
+      } catch (err) {
+        console.error("Failed to delete cloud part:", err);
+        return false;
+      }
+    },
+    [userId]
+  );
+
+  // Update show name in the cloud
+  const updateCloudShowName = useCallback(
+    async (showId: string, name: string): Promise<boolean> => {
+      if (!userId) return false;
+
+      try {
+        const { error } = await supabase
+          .from("shows")
+          .update({ name, updated_at: new Date().toISOString() })
+          .eq("id", showId);
+
+        if (error) throw error;
+        console.log("Updated cloud show name:", name);
+        return true;
+      } catch (err) {
+        console.error("Failed to update cloud show name:", err);
+        return false;
+      }
+    },
+    [userId]
+  );
+
+  // Reorder parts in the cloud
+  const reorderCloudParts = useCallback(
+    async (showId: string, partIds: string[]): Promise<boolean> => {
+      if (!userId) return false;
+
+      try {
+        // Update position for each part
+        const updates = partIds.map((id, index) =>
+          supabase.from("parts").update({ position: index }).eq("id", id)
+        );
+
+        await Promise.all(updates);
+        console.log("Reordered cloud parts");
+        return true;
+      } catch (err) {
+        console.error("Failed to reorder cloud parts:", err);
+        return false;
+      }
+    },
+    [userId]
+  );
+
   return {
     // State
     shows: state.shows,
@@ -230,8 +375,15 @@ export function useCloudSync(userId: string | null) {
     error: state.error,
     lastSynced: state.lastSynced,
 
-    // Actions
+    // Read actions
     fetchShows,
     fetchShowWithParts,
+
+    // Write actions (two-way sync)
+    createCloudPart,
+    updateCloudPart,
+    deleteCloudPart,
+    updateCloudShowName,
+    reorderCloudParts,
   };
 }
