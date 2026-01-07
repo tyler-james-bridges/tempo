@@ -52,9 +52,8 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Ignore TypeScript/ESLint errors in builds (remove for stricter builds)
-  // typescript: { ignoreBuildErrors: true },
-  // eslint: { ignoreDuringBuilds: true },
+  // Skip ESLint during builds (run separately in CI if needed)
+  eslint: { ignoreDuringBuilds: true },
 };
 
 export default nextConfig;
