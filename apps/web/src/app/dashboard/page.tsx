@@ -239,7 +239,7 @@ export default function DashboardPage() {
                   <div>
                     <h3 className="font-medium text-[#1A1A1A]">{show.name}</h3>
                     <p className="text-[#8C8C8C] text-sm">
-                      {show.source_filename || "Manual entry"}
+                      {show.sourceFilename || "Manual entry"}
                     </p>
                   </div>
                 </div>
@@ -248,7 +248,7 @@ export default function DashboardPage() {
                     {show.status}
                   </span>
                   <span className="text-[#8C8C8C] text-sm">
-                    {new Date(show.created_at).toLocaleDateString()}
+                    {new Date(show.createdAt).toLocaleDateString()}
                   </span>
                   <svg className="w-4 h-4 text-[#8C8C8C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
