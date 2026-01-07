@@ -46,29 +46,29 @@ export type ShowSourceType = 'pdf_upload' | 'dropbox' | 'manual';
 
 export interface CloudShow {
   id: string;
-  user_id: string;
+  userId: string;
   name: string;
-  source_type: ShowSourceType;
-  source_filename?: string;
-  pdf_url?: string;
-  musicxml_url?: string;
+  sourceType: ShowSourceType;
+  sourceFilename?: string;
+  pdfUrl?: string;
+  musicxmlUrl?: string;
   status: ShowStatus;
-  error_message?: string;
-  created_at: string;
-  updated_at: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CloudPart {
   id: string;
-  show_id: string;
+  showId: string;
   name: string;
   tempo: number;
   beats: number;
-  measure_start?: number;
-  measure_end?: number;
-  rehearsal_mark?: string;
+  measureStart?: number;
+  measureEnd?: number;
+  rehearsalMark?: string;
   position: number;
-  created_at: string;
+  createdAt: string;
 }
 
 // ============================================
@@ -121,9 +121,9 @@ export function cloudToLocalShow(cloudShow: CloudShow, cloudParts: CloudPart[]):
         name: p.name,
         tempo: p.tempo,
         beats: p.beats,
-        measureStart: p.measure_start,
-        measureEnd: p.measure_end,
-        rehearsalMark: p.rehearsal_mark,
+        measureStart: p.measureStart,
+        measureEnd: p.measureEnd,
+        rehearsalMark: p.rehearsalMark,
         position: p.position,
       })),
     activePartId: null,
