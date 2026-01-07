@@ -7,12 +7,17 @@
  *
  * Uses optimistic updates - local state changes immediately,
  * cloud sync happens asynchronously.
+ *
+ * Also subscribes to Realtime updates so changes from web
+ * automatically refresh the local show.
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useShow, type Part } from "./useShow";
 import { useAuth } from "./useAuth";
 import { useCloudSync } from "./useCloudSync";
+import { supabase } from "../lib/supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export function useSyncedShow() {
   const show = useShow();
@@ -25,6 +30,80 @@ export function useSyncedShow() {
   // Keep track of pending cloud operations for ID mapping
   const pendingCloudIds = useRef<Map<string, Promise<string | null>>>(new Map());
 
+  // Track if we're currently syncing to avoid loops
+  const isSyncingRef = useRef(false);
+
+  // Realtime channel for current show
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  // Subscribe to Realtime updates for the current show
+  // This ensures changes from web automatically update local state
+  useEffect(() => {
+    if (!cloudShowId || !auth.user?.id) {
+      // Clean up if no cloud show
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      return;
+    }
+
+    // Refresh local show from cloud
+    const refreshFromCloud = async () => {
+      if (isSyncingRef.current) return; // Skip if we triggered this change
+
+      console.log("Realtime: Refreshing show from cloud...");
+      const cloudShow = await cloudSync.fetchShowWithParts(cloudShowId);
+      if (cloudShow) {
+        show.importShow(cloudShow);
+        console.log("Realtime: Local show updated from cloud");
+      }
+    };
+
+    // Create channel for this specific show's parts
+    const channel = supabase
+      .channel(`show-${cloudShowId}-parts`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "parts",
+          filter: `show_id=eq.${cloudShowId}`,
+        },
+        (payload) => {
+          console.log("Realtime: Parts change detected:", payload.eventType);
+          refreshFromCloud();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "shows",
+          filter: `id=eq.${cloudShowId}`,
+        },
+        (payload) => {
+          console.log("Realtime: Show update detected");
+          refreshFromCloud();
+        }
+      )
+      .subscribe((status) => {
+        console.log(`Realtime subscription for show ${cloudShowId}:`, status);
+      });
+
+    channelRef.current = channel;
+
+    // Cleanup on unmount or cloudShowId change
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [cloudShowId, auth.user?.id, cloudSync, show]);
+
   // Synced add part - creates locally first, then syncs to cloud
   const addPart = useCallback(
     (name: string, tempo: number, beats: number): Part => {
@@ -33,6 +112,7 @@ export function useSyncedShow() {
 
       // Sync to cloud in background if connected
       if (isCloudSynced && cloudShowId) {
+        isSyncingRef.current = true;
         const cloudPromise = cloudSync.createCloudPart(cloudShowId, {
           name: localPart.name,
           tempo: localPart.tempo,
@@ -59,6 +139,8 @@ export function useSyncedShow() {
             });
           }
           pendingCloudIds.current.delete(localPart.id);
+          // Allow Realtime updates again after a short delay
+          setTimeout(() => { isSyncingRef.current = false; }, 1000);
         });
       }
 
@@ -75,7 +157,10 @@ export function useSyncedShow() {
 
       // Sync to cloud in background if connected
       if (isCloudSynced) {
-        cloudSync.updateCloudPart(id, updates);
+        isSyncingRef.current = true;
+        cloudSync.updateCloudPart(id, updates).then(() => {
+          setTimeout(() => { isSyncingRef.current = false; }, 1000);
+        });
       }
     },
     [isCloudSynced, cloudSync, show]
@@ -89,7 +174,10 @@ export function useSyncedShow() {
 
       // Sync to cloud in background if connected
       if (isCloudSynced) {
-        cloudSync.deleteCloudPart(id);
+        isSyncingRef.current = true;
+        cloudSync.deleteCloudPart(id).then(() => {
+          setTimeout(() => { isSyncingRef.current = false; }, 1000);
+        });
       }
     },
     [isCloudSynced, cloudSync, show]
@@ -109,7 +197,10 @@ export function useSyncedShow() {
 
       // Sync to cloud in background if connected
       if (isCloudSynced && cloudShowId) {
-        cloudSync.reorderCloudParts(cloudShowId, partIds);
+        isSyncingRef.current = true;
+        cloudSync.reorderCloudParts(cloudShowId, partIds).then(() => {
+          setTimeout(() => { isSyncingRef.current = false; }, 1000);
+        });
       }
     },
     [isCloudSynced, cloudShowId, cloudSync, show]
@@ -123,7 +214,10 @@ export function useSyncedShow() {
 
       // Sync to cloud in background if connected
       if (isCloudSynced && cloudShowId) {
-        cloudSync.updateCloudShowName(cloudShowId, name);
+        isSyncingRef.current = true;
+        cloudSync.updateCloudShowName(cloudShowId, name).then(() => {
+          setTimeout(() => { isSyncingRef.current = false; }, 1000);
+        });
       }
     },
     [isCloudSynced, cloudShowId, cloudSync, show]
