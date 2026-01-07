@@ -17,6 +17,7 @@ import { usePresets, TempoPreset } from '../hooks/usePresets';
 import { ShowHook } from '../hooks/useShow';
 import { BluetoothPanel } from './BluetoothPanel';
 import { ScorePanel } from './ScorePanel';
+import { CloudShowsPanel } from './CloudShowsPanel';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -61,7 +62,7 @@ const SOUNDS: { type: SoundType; label: string; desc: string }[] = [
   { type: 'cowbell', label: 'Bell', desc: 'Bright' },
 ];
 
-type Tab = 'score' | 'tempo' | 'sound' | 'bluetooth';
+type Tab = 'score' | 'tempo' | 'sound' | 'bluetooth' | 'cloud';
 
 export function SettingsDrawer({
   visible,
@@ -243,6 +244,17 @@ export function SettingsDrawer({
                 <Text style={styles.latencyBadgeUnit}>ms</Text>
               </View>
             )}
+          </Pressable>
+          <Pressable
+            style={[styles.tab, activeTab === 'cloud' && styles.tabActive]}
+            onPress={() => setActiveTab('cloud')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'cloud' }}
+            accessibilityLabel="Cloud sync settings"
+          >
+            <Text style={[styles.tabText, activeTab === 'cloud' && styles.tabTextActive]}>
+              Cloud
+            </Text>
           </Pressable>
         </View>
 
@@ -584,6 +596,13 @@ export function SettingsDrawer({
               stopCalibration={stopCalibration}
               calibrationTap={calibrationTap}
               getCalibrationResult={getCalibrationResult}
+            />
+          )}
+
+          {activeTab === 'cloud' && (
+            <CloudShowsPanel
+              show={showManager}
+              onClose={onClose}
             />
           )}
 

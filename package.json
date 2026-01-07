@@ -1,28 +1,20 @@
 {
-  "name": "tempo",
+  "name": "tempo-monorepo",
   "version": "1.0.0",
-  "main": "index.ts",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
-  },
-  "dependencies": {
-    "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-community/slider": "5.0.1",
-    "expo": "~54.0.30",
-    "expo-keep-awake": "~15.0.8",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-audio-api": "^0.10.3",
-    "react-native-gesture-handler": "^2.30.0",
-    "react-native-safe-area-context": "^5.6.2"
+    "dev:mobile": "npm run start --workspace=@tempo/mobile",
+    "dev:web": "npm run dev --workspace=@tempo/web",
+    "build:web": "npm run build --workspace=@tempo/web",
+    "lint": "turbo lint",
+    "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "turbo": "^2.5.0"
   },
-  "private": true
+  "packageManager": "npm@10.8.2"
 }

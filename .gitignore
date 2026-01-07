@@ -3,11 +3,18 @@
 # dependencies
 node_modules/
 
+# Turborepo
+.turbo/
+
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+
+# Next.js
+.next/
+out/
 
 # Native
 .kotlin/
