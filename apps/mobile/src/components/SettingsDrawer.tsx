@@ -22,9 +22,12 @@ import { CloudShowsPanel } from './CloudShowsPanel';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+type Tab = 'score' | 'tempo' | 'sound' | 'bluetooth' | 'cloud';
+
 interface SettingsDrawerProps {
   visible: boolean;
   onClose: () => void;
+  initialTab?: Tab;
   tempo: number;
   setTempo: (t: number) => void;
   beats: number;
@@ -63,11 +66,10 @@ const SOUNDS: { type: SoundType; label: string; desc: string }[] = [
   { type: 'cowbell', label: 'Bell', desc: 'Bright' },
 ];
 
-type Tab = 'score' | 'tempo' | 'sound' | 'bluetooth' | 'cloud';
-
 export function SettingsDrawer({
   visible,
   onClose,
+  initialTab = 'tempo',
   tempo,
   setTempo,
   beats,
@@ -98,11 +100,18 @@ export function SettingsDrawer({
 }: SettingsDrawerProps) {
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const [activeTab, setActiveTab] = useState<Tab>('tempo');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [showAddPreset, setShowAddPreset] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
 
   const presetsManager = usePresets();
+
+  // Update active tab when initialTab changes (e.g., when opening from sound button)
+  useEffect(() => {
+    if (visible) {
+      setActiveTab(initialTab);
+    }
+  }, [visible, initialTab]);
 
   // Calculate count-in options based on time signature
   const getCountInOptions = () => {

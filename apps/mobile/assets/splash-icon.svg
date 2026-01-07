@@ -1,24 +1,11 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <!-- Simplified icon for splash -->
-  <!-- Beat ring -->
-  <circle cx="100" cy="100" r="70" fill="none" stroke="#2a2a32" stroke-width="4"/>
+  <!-- TempoMap Splash Icon - matches web app logo -->
 
-  <!-- Beat indicators (4 beats) -->
-  <circle cx="100" cy="30" r="8" fill="#00D4FF"/>
-  <circle cx="170" cy="100" r="6" fill="#3a3a44"/>
-  <circle cx="100" cy="170" r="6" fill="#3a3a44"/>
-  <circle cx="30" cy="100" r="6" fill="#3a3a44"/>
+  <!-- Marigold background with rounded corners -->
+  <rect width="200" height="200" rx="44" fill="#E8913A"/>
 
-  <!-- Center -->
-  <circle cx="100" cy="100" r="35" fill="#0a0a0f"/>
-
-  <!-- T -->
-  <text x="100" y="110"
-        font-family="system-ui, -apple-system, sans-serif"
-        font-size="42"
-        font-weight="200"
-        fill="#ffffff"
-        text-anchor="middle">
-    T
-  </text>
+  <!-- White music note -->
+  <g transform="translate(50, 38) scale(4.17)">
+    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" fill="white"/>
+  </g>
 </svg>
