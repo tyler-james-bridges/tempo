@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const filePath = `${user.id}/${timestamp}_${safeName}`;
 
     // Upload to Supabase Storage using admin client (bypasses RLS)
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from("pdfs")
       .upload(filePath, file, {
         contentType: "application/pdf",
