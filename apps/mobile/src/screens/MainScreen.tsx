@@ -256,10 +256,15 @@ export function MainScreen() {
 
       <GestureDetector gesture={panGesture}>
         <SafeAreaView style={styles.safe}>
-          {/* Minimal Header */}
+          {/* Header - Updated branding to match web */}
           <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.brandMark}>TEMPO</Text>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <Text style={styles.logoIconText}>♪</Text>
+              </View>
+              <Text style={styles.brandMark}>TempoMap</Text>
+            </View>
             <View style={[styles.statusDot, isPlaying && styles.statusDotActive]} />
           </View>
           <Pressable
@@ -576,7 +581,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  // Header - Minimal
+  // Header - Matches web header style
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -587,23 +592,40 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.md,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
   },
+  logoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.accent.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoIconText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
   brandMark: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text.tertiary,
-    letterSpacing: 3,
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+    letterSpacing: -0.3,
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.text.disabled,
   },
   statusDotActive: {
-    backgroundColor: colors.active.primary,
-    shadowColor: colors.active.primary,
+    backgroundColor: colors.accent.primary,
+    shadowColor: colors.accent.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 8,
@@ -716,25 +738,31 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
 
-  // Quick Settings Row
+  // Quick Settings Row - Card style like web
   quickSettings: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingVertical: spacing.xl,
   },
   quickSettingButton: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.bg.surface,
-    borderRadius: 16,
+    backgroundColor: colors.bg.card,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border.subtle,
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: 85,
+    // Subtle shadow for card effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   quickSettingButtonAccent: {
-    backgroundColor: colors.accent.subtle,
+    backgroundColor: colors.accent.muted,
     borderColor: colors.accent.dim,
   },
   quickSettingValue: {
@@ -795,7 +823,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   tempoMultiplierButton: {
-    backgroundColor: colors.accent.subtle,
+    backgroundColor: colors.accent.muted,
     borderColor: colors.accent.dim,
   },
   tempoMultiplierText: {
@@ -804,7 +832,7 @@ const styles = StyleSheet.create({
     color: colors.accent.primary,
   },
 
-  // Main Action Row
+  // Main Action Row - Button styles aligned with web
   mainActionRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -812,49 +840,59 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   secondaryButton: {
-    height: 52,
+    height: 48,
     paddingHorizontal: spacing.lg,
-    borderRadius: 26,
-    backgroundColor: colors.bg.surface,
+    borderRadius: 8,
+    backgroundColor: colors.bg.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
-    minWidth: 90,
+    borderColor: colors.border.medium,
+    minWidth: 100,
+    // Subtle shadow for card effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   secondaryButtonActive: {
     backgroundColor: colors.success,
     borderColor: colors.success,
   },
   secondaryButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.text.secondary,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   secondaryButtonTextActive: {
-    color: colors.bg.primary,
+    color: '#FFFFFF',
   },
+  // Primary Play Button - Large, prominent
   playButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.bg.surface,
+    backgroundColor: colors.accent.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.border.medium,
+    // Shadow like web btn-primary
+    shadowColor: colors.accent.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
   playButtonActive: {
-    backgroundColor: colors.active.glow,
-    borderColor: colors.active.primary,
-    shadowColor: colors.active.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 24,
+    backgroundColor: colors.accent.hover,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
   },
   playButtonPressed: {
     transform: [{ scale: 0.96 }],
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
   },
   playIcon: {
     width: 0,
@@ -862,7 +900,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 24,
     borderTopWidth: 15,
     borderBottomWidth: 15,
-    borderLeftColor: colors.text.primary,
+    borderLeftColor: '#FFFFFF',
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     marginLeft: 6,
@@ -870,7 +908,7 @@ const styles = StyleSheet.create({
   stopIcon: {
     width: 24,
     height: 24,
-    backgroundColor: colors.text.primary,
+    backgroundColor: '#FFFFFF',
     borderRadius: 4,
   },
 

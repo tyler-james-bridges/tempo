@@ -617,7 +617,7 @@ export function SettingsDrawer({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: colors.bg.overlay,
   },
   drawer: {
     position: 'absolute',
@@ -630,6 +630,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl,
     borderTopWidth: 1,
     borderColor: colors.border.subtle,
+    // Card-like shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   handleRow: {
     alignItems: 'center',
@@ -642,7 +648,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text.disabled,
   },
 
-  // Tabs - increased touch targets
+  // Tabs - matches web's clean navigation style
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: spacing.md,
@@ -657,20 +663,21 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.md + 2, // 18px for better touch target
     minHeight: 48, // iOS minimum touch target
-    borderBottomWidth: 3,
+    borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   tabActive: {
     borderBottomColor: colors.accent.primary,
   },
   tabText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: colors.text.tertiary,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   tabTextActive: {
     color: colors.accent.primary,
+    fontWeight: '600',
   },
   tabBadge: {
     backgroundColor: colors.accent.subtle,
@@ -791,33 +798,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
+  // Primary button style matching web btn-primary
   addPresetButton: {
-    backgroundColor: colors.accent.subtle,
+    backgroundColor: colors.accent.primary,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
+    borderRadius: 8,
+    // Shadow like web btn-primary
+    shadowColor: colors.accent.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addPresetButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.accent.primary,
+    color: '#FFFFFF',
   },
+  // Card-style form matching web's card pattern
   addPresetForm: {
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.lg,
+    backgroundColor: colors.bg.card,
+    borderRadius: 12,
     padding: spacing.lg,
     marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+    // Subtle shadow for card effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
+  // Input style matching web's .input class
   presetInput: {
-    backgroundColor: colors.bg.primary,
-    borderRadius: radius.md,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: 8,
     padding: spacing.md,
     fontSize: 16,
     color: colors.text.primary,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border.medium,
     marginBottom: spacing.md,
   },
   addPresetActions: {
@@ -825,25 +847,37 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: spacing.md,
   },
+  // Secondary button style matching web btn-secondary
   cancelButton: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
+    borderRadius: 8,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.medium,
   },
   cancelButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text.tertiary,
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text.secondary,
   },
+  // Primary save button
   saveButton: {
     backgroundColor: colors.accent.primary,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
+    borderRadius: 8,
+    // Shadow like web btn-primary
+    shadowColor: colors.accent.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   saveButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.bg.primary,
+    color: '#FFFFFF',
   },
 
   // Count-in options
@@ -881,62 +915,74 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Chips - improved touch targets and spacing
+  // Chips - improved touch targets and spacing with card-like appearance
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm + 2, // 10px gap
+    gap: spacing.sm,
   },
   chip: {
     paddingVertical: spacing.md - 2, // 14px
     paddingHorizontal: spacing.lg - 4, // 20px
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
+    backgroundColor: colors.bg.card,
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: colors.border.subtle,
     minHeight: 44, // iOS minimum touch target
     justifyContent: 'center',
+    // Subtle shadow for card effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   chipActive: {
-    backgroundColor: colors.accent.subtle,
+    backgroundColor: colors.accent.muted,
     borderColor: colors.accent.primary,
   },
   chipText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
     color: colors.text.secondary,
   },
   chipTextActive: {
     color: colors.accent.primary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 
-  // Sound grid - larger cards with descriptions
+  // Sound grid - card-style matching web design
   soundGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   soundCard: {
     width: '47%',
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
+    backgroundColor: colors.bg.card,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: colors.border.subtle,
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     minHeight: 80,
     justifyContent: 'center',
+    // Card shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   soundCardActive: {
-    backgroundColor: colors.accent.subtle,
+    backgroundColor: colors.accent.muted,
     borderColor: colors.accent.primary,
     borderWidth: 2,
   },
   soundLabel: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text.secondary,
     marginBottom: 4,
   },
@@ -945,7 +991,7 @@ const styles = StyleSheet.create({
   },
   soundDesc: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '400',
     color: colors.text.disabled,
   },
   soundDescActive: {
@@ -961,27 +1007,35 @@ const styles = StyleSheet.create({
   },
   sliderValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.accent.primary,
     fontVariant: ['tabular-nums'],
   },
   sliderContainer: {
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.md,
+    backgroundColor: colors.bg.card,
+    borderRadius: 8,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   slider: {
     height: 44, // Adequate touch target
   },
 
-  // Options card - grouped options with consistent spacing
+  // Options card - matches web's card pattern
   optionsCard: {
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.lg,
+    backgroundColor: colors.bg.card,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border.subtle,
     overflow: 'hidden',
+    // Card shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   optionRow: {
     flexDirection: 'row',

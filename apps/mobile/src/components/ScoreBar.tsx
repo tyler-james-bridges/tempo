@@ -92,9 +92,9 @@ const styles = StyleSheet.create({
   },
   showName: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.text.disabled,
-    letterSpacing: 2,
+    fontWeight: '600',
+    color: colors.text.tertiary,
+    letterSpacing: 1.5,
     textAlign: 'center',
   },
   partsContainer: {
@@ -102,20 +102,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
+  // Part pill style - matches web's part-card pattern
   partPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.bg.surface,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
+    backgroundColor: colors.bg.card,
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: colors.border.subtle,
     minHeight: 40,
+    // Card shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
   },
   partPillActive: {
-    backgroundColor: colors.accent.subtle,
+    backgroundColor: colors.accent.muted,
     borderColor: colors.accent.primary,
   },
   partName: {
@@ -129,7 +136,7 @@ const styles = StyleSheet.create({
   },
   partTempo: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text.disabled,
     fontVariant: ['tabular-nums'],
   },
