@@ -3,10 +3,13 @@
  *
  * Fetches shows from Supabase cloud and converts them
  * to the local format for use in the metronome.
+ *
+ * Includes Supabase Realtime subscriptions for live updates.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { Part, Show } from "./useShow";
 
 // Cloud types (from Supabase)
@@ -154,6 +157,67 @@ export function useCloudSync(userId: string | null) {
       });
     }
   }, [userId, fetchShows]);
+
+  // Realtime subscriptions for live updates
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      // Clean up if user logs out
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      return;
+    }
+
+    // Create a channel for this user's data
+    const channel = supabase
+      .channel(`user-${userId}-sync`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "shows",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log("Shows change:", payload.eventType);
+          // Refresh shows list on any change
+          fetchShows();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "parts",
+        },
+        (payload) => {
+          // Check if this part belongs to one of user's shows
+          const showId = (payload.new as CloudPart)?.show_id || (payload.old as { show_id?: string })?.show_id;
+          if (showId && state.shows.some((s) => s.id === showId)) {
+            console.log("Parts change:", payload.eventType);
+            fetchShows();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log("Realtime subscription status:", status);
+      });
+
+    channelRef.current = channel;
+
+    // Cleanup on unmount or userId change
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [userId, fetchShows, state.shows]);
 
   // Get only ready shows (processed and available)
   const readyShows = state.shows.filter((s) => s.status === "ready");
