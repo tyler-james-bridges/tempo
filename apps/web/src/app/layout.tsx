@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tempo Cloud - Upload Sheet Music, Get Tempo Maps",
+  title: "TempoMap - Upload Sheet Music, Get Tempo Maps",
   description:
     "Upload your sheet music PDFs and automatically extract tempo markings, measures, and rehearsal marks for your metronome app.",
 };

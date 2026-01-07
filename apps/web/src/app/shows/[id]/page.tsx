@@ -196,7 +196,7 @@ export default function ShowDetailPage() {
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
             </div>
-            <span className="text-lg font-bold text-[#1A1A1A]">Tempo</span>
+            <span className="text-lg font-bold text-[#1A1A1A]">TempoMap</span>
           </Link>
         </div>
       </header>
@@ -383,7 +383,7 @@ export default function ShowDetailPage() {
               </svg>
               <div>
                 <p className="text-[#16A34A] font-medium">Ready to practice</p>
-                <p className="text-[#5C5C5C] text-sm">This show syncs automatically to the Tempo app</p>
+                <p className="text-[#5C5C5C] text-sm">This show syncs automatically to the TempoMap app</p>
               </div>
             </div>
           </div>

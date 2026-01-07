@@ -30,7 +30,7 @@ export default function Home() {
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
             </div>
-            <span className="text-xl font-bold tracking-tight text-[#1A1A1A]">Tempo</span>
+            <span className="text-xl font-bold tracking-tight text-[#1A1A1A]">TempoMap</span>
           </Link>
 
           <nav className="flex items-center gap-4">
@@ -83,7 +83,7 @@ export default function Home() {
 
           <p className="text-lg text-[#5C5C5C] mb-10 max-w-xl mx-auto leading-relaxed">
             Extract tempo markings, time signatures, and rehearsal marks
-            from your PDFs. Sync directly to the Tempo metronome app.
+            from your PDFs. Sync directly to the TempoMap app.
           </p>
 
           {/* CTA Buttons */}
@@ -136,7 +136,7 @@ export default function Home() {
               </div>
               <h3 className="text-lg font-semibold mb-2 text-[#1A1A1A]">Sync to app</h3>
               <p className="text-[#5C5C5C] text-sm leading-relaxed">
-                Tempo maps appear instantly in the Tempo metronome app.
+                Tempo maps appear instantly in the TempoMap app.
               </p>
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-[#E8E8E6] bg-white px-6 py-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-[#8C8C8C] text-sm">© {new Date().getFullYear()} Tempo</span>
+          <span className="text-[#8C8C8C] text-sm">© {new Date().getFullYear()} TempoMap</span>
           <div className="flex items-center gap-6">
             <Link href="#" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
               Privacy
