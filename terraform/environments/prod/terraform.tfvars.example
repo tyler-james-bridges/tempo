@@ -1,0 +1,15 @@
+# Production Environment Variables
+# Copy this file to terraform.tfvars and fill in your actual values
+# NEVER commit terraform.tfvars to version control!
+
+# Supabase Configuration
+supabase_access_token      = "sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+supabase_organization_id   = "your-org-id"
+supabase_database_password = "your-database-password"
+supabase_anon_key          = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+# Vercel Configuration
+vercel_api_token = "xxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Anthropic Configuration
+anthropic_api_key = "sk-ant-xxxxxxxxxxxxxxxxxxxxxxxx"
