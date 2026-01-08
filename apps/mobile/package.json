@@ -20,7 +20,7 @@
     "@react-native-community/slider": "5.0.1",
     "@supabase/supabase-js": "^2.89.0",
     "expo": "~54.0.30",
-    "expo-build-properties": "~0.15.0",
+    "expo-build-properties": "~1.0.10",
     "expo-keep-awake": "~15.0.8",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
