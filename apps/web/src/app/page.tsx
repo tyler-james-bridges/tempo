@@ -168,11 +168,14 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-[#8C8C8C] text-sm">© {new Date().getFullYear()} TempoMap</span>
           <div className="flex items-center gap-6">
-            <Link href="#" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
+            <Link href="/privacy" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
               Privacy
             </Link>
-            <Link href="#" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
+            <Link href="/terms" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
               Terms
+            </Link>
+            <Link href="/support" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
+              Support
             </Link>
           </div>
         </div>

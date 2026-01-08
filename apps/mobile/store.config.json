@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json.schemastore.org/eas-metadata.json",
+  "configVersion": 0,
+  "appStore": {
+    "info": {
+      "en-US": {
+        "title": "TempoMap - Metronome for Musicians",
+        "subtitle": "Precision Practice Companion",
+        "description": "TempoMap is a professional-grade metronome designed for serious musicians. Whether you're practicing scales, learning a new piece, or performing live, TempoMap delivers rock-solid timing with a beautiful, intuitive interface.\n\nKEY FEATURES:\n\n- Precise Tempo Control: Set any tempo from 30 to 300 BPM with single-tap precision\n- Multiple Time Signatures: 2/4, 3/4, 4/4, 5/4, 6/4, 7/4, and more\n- Subdivisions: Quarter notes through 16th notes for detailed practice\n- Custom Accent Patterns: Emphasize specific beats for complex rhythms\n- Multiple Click Sounds: Choose from click, beep, wood block, and cowbell\n- Visual Beat Indicator: Beautiful animated ring shows beat position\n- Count-In Feature: Get ready before starting with customizable count-ins\n- Bluetooth Latency Compensation: Auto-calibrate for wireless speakers/headphones\n- Dark Mode Design: Easy on the eyes during long practice sessions\n- Keep Awake: Screen stays on while practicing\n\nPERFECT FOR:\n- Practice sessions\n- Music lessons\n- Live performances\n- Ensemble rehearsals\n- Recording sessions\n\nSYNC FEATURES:\n- Cloud sync with web app at tempomap.vercel.app\n- Import shows and setlists\n- Real-time sync across devices\n\nBuilt by musicians, for musicians. No ads, no distractions - just pure timing precision.",
+        "keywords": "metronome,tempo,music,practice,musician,timing,beat,rhythm,bpm,click track,music practice,musician tools,practice timer",
+        "privacyPolicyUrl": "https://tempomap.vercel.app/privacy",
+        "supportUrl": "https://tempomap.vercel.app/support",
+        "marketingUrl": "https://tempomap.vercel.app"
+      }
+    },
+    "categories": {
+      "primary": "MUSIC",
+      "secondary": "UTILITIES"
+    },
+    "copyright": "2025 TempoMap",
+    "ageRating": {
+      "madeForKids": false,
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE"
+    },
+    "appReviewDetail": {
+      "contactEmail": "review@tempomap.app",
+      "contactFirstName": "Tyler",
+      "contactLastName": "Bridges",
+      "contactPhone": "+1-555-000-0000",
+      "demoUsername": "",
+      "demoPassword": "",
+      "notes": "This is a metronome app. No login is required to use the core functionality. Cloud sync features require account creation but are optional. The app plays audio clicks at the selected tempo when the play button is pressed. All features are functional - there are no placeholder screens."
+    }
+  },
+  "googlePlay": {
+    "title": "TempoMap - Metronome for Musicians",
+    "shortDescription": "Professional metronome with visual beats, subdivisions, and cloud sync.",
+    "fullDescription": "TempoMap is a professional-grade metronome designed for serious musicians. Whether you're practicing scales, learning a new piece, or performing live, TempoMap delivers rock-solid timing with a beautiful, intuitive interface.\n\nKEY FEATURES:\n\n- Precise Tempo Control: Set any tempo from 30 to 300 BPM with single-tap precision\n- Multiple Time Signatures: 2/4, 3/4, 4/4, 5/4, 6/4, 7/4, and more\n- Subdivisions: Quarter notes through 16th notes for detailed practice\n- Custom Accent Patterns: Emphasize specific beats for complex rhythms\n- Multiple Click Sounds: Choose from click, beep, wood block, and cowbell\n- Visual Beat Indicator: Beautiful animated ring shows beat position\n- Count-In Feature: Get ready before starting with customizable count-ins\n- Bluetooth Latency Compensation: Auto-calibrate for wireless speakers/headphones\n- Dark Mode Design: Easy on the eyes during long practice sessions\n- Keep Awake: Screen stays on while practicing\n\nPERFECT FOR:\n- Practice sessions\n- Music lessons\n- Live performances\n- Ensemble rehearsals\n- Recording sessions\n\nSYNC FEATURES:\n- Cloud sync with web app\n- Import shows and setlists\n- Real-time sync across devices\n\nBuilt by musicians, for musicians. No ads, no distractions - just pure timing precision.",
+    "video": "",
+    "category": "MUSIC_AND_AUDIO",
+    "contactEmail": "support@tempomap.app",
+    "contactWebsite": "https://tempomap.vercel.app",
+    "contentRating": {
+      "targetAudience": "EVERYONE"
+    }
+  }
+}
