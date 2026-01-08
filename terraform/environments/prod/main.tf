@@ -48,9 +48,10 @@ module "vercel" {
 
   root_directory = "apps/web"
 
-  supabase_url      = module.supabase.api_url
-  supabase_anon_key = var.supabase_anon_key
-  anthropic_api_key = var.anthropic_api_key
+  supabase_url              = module.supabase.api_url
+  supabase_anon_key         = var.supabase_anon_key
+  supabase_service_role_key = var.supabase_service_role_key
+  anthropic_api_key         = var.anthropic_api_key
 }
 
 # Outputs
@@ -101,6 +102,12 @@ variable "supabase_anon_key" {
 
 variable "anthropic_api_key" {
   description = "Anthropic API key"
+  type        = string
+  sensitive   = true
+}
+
+variable "supabase_service_role_key" {
+  description = "Supabase service role key for server-side operations"
   type        = string
   sensitive   = true
 }

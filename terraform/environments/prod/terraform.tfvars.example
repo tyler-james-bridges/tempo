@@ -7,6 +7,7 @@ supabase_access_token      = "sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 supabase_organization_id   = "your-org-id"
 supabase_database_password = "your-database-password"
 supabase_anon_key          = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+supabase_service_role_key  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
 # Vercel Configuration
 vercel_api_token = "xxxxxxxxxxxxxxxxxxxxxxxx"

@@ -46,6 +46,14 @@ resource "vercel_project_environment_variable" "anthropic_api_key" {
   sensitive  = true
 }
 
+resource "vercel_project_environment_variable" "supabase_service_role_key" {
+  project_id = vercel_project.main.id
+  key        = "SUPABASE_SERVICE_ROLE_KEY"
+  value      = var.supabase_service_role_key
+  target     = ["production", "preview"]
+  sensitive  = true
+}
+
 # Production domain (optional - uncomment to configure custom domain)
 # resource "vercel_project_domain" "main" {
 #   project_id = vercel_project.main.id

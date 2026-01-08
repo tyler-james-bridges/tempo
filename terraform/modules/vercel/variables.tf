@@ -67,3 +67,9 @@ variable "anthropic_api_key" {
   type        = string
   sensitive   = true
 }
+
+variable "supabase_service_role_key" {
+  description = "Supabase service role key for server-side operations"
+  type        = string
+  sensitive   = true
+}
