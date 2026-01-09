@@ -8,53 +8,33 @@ const EMAIL = "support@tempomap.app";
 function EmailButton() {
   const [copied, setCopied] = useState(false);
 
-  const handleClick = async () => {
-    // Try mailto first
-    const mailtoLink = `mailto:${EMAIL}`;
-    const newWindow = window.open(mailtoLink, "_self");
-
-    // If mailto didn't work (no email client), copy to clipboard
-    setTimeout(async () => {
-      try {
-        await navigator.clipboard.writeText(EMAIL);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        // Fallback for older browsers
-        const textArea = document.createElement("textarea");
-        textArea.value = EMAIL;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    }, 300);
-  };
-
-  const copyEmail = async () => {
+  async function copyToClipboard(): Promise<void> {
     try {
       await navigator.clipboard.writeText(EMAIL);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      // Fallback
+    } catch {
+      // Fallback for older browsers
       const textArea = document.createElement("textarea");
       textArea.value = EMAIL;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand("copy");
       document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
-  };
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleEmailClick(): void {
+    // Try mailto first
+    window.open(`mailto:${EMAIL}`, "_self");
+    // Also copy to clipboard after a brief delay as fallback
+    setTimeout(copyToClipboard, 300);
+  }
 
   return (
     <div className="flex flex-col sm:flex-row gap-3">
       <button
-        onClick={handleClick}
+        onClick={handleEmailClick}
         className="btn-primary inline-flex items-center justify-center gap-2"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,7 +43,7 @@ function EmailButton() {
         Email Support
       </button>
       <button
-        onClick={copyEmail}
+        onClick={copyToClipboard}
         className="btn-secondary inline-flex items-center justify-center gap-2"
       >
         {copied ? (
