@@ -5,12 +5,14 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { getStatusBadgeClass } from "@/lib/utils";
+import { PdfViewer } from "@/components/PdfViewer";
 
 interface Show {
   id: string;
   name: string;
   source_type: string;
   source_filename: string | null;
+  pdf_url: string | null;
   status: string;
   error_message: string | null;
   created_at: string;
@@ -41,6 +43,7 @@ export default function ShowDetailPage() {
   const [newPartName, setNewPartName] = useState("");
   const [newPartTempo, setNewPartTempo] = useState(120);
   const [newPartBeats, setNewPartBeats] = useState(4);
+  const [showPdf, setShowPdf] = useState(false);
 
   useEffect(() => {
     loadShow();
@@ -269,6 +272,36 @@ export default function ShowDetailPage() {
                 <p className="text-[#5C5C5C] text-sm">Extracting tempo information</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* PDF Viewer Section */}
+        {show.pdf_url && (
+          <div className="card mb-6 overflow-hidden">
+            <button
+              onClick={() => setShowPdf(!showPdf)}
+              className="w-full p-4 flex items-center justify-between hover:bg-[#FAFAF9] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-[#5C5C5C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="font-medium text-[#1A1A1A]">Sheet Music PDF</span>
+              </div>
+              <svg
+                className={`w-5 h-5 text-[#5C5C5C] transition-transform ${showPdf ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showPdf && (
+              <div className="border-t border-[#E8E8E6] p-4">
+                <PdfViewer showId={showId} />
+              </div>
+            )}
           </div>
         )}
 
