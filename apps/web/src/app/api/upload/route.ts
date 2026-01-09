@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 
 // Admin client for storage operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -83,13 +84,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Trigger processing (async - don't wait)
+    // Trigger processing after response is sent (keeps function alive)
     const processUrl = new URL("/api/process", request.url);
-    fetch(processUrl.toString(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ showId: show.id, pdfUrl: publicUrl }),
-    }).catch(console.error);
+    after(async () => {
+      try {
+        const response = await fetch(processUrl.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ showId: show.id, pdfUrl: publicUrl }),
+        });
+        if (!response.ok) {
+          console.error("Process API failed:", await response.text());
+        }
+      } catch (error) {
+        console.error("Process fetch error:", error);
+      }
+    });
 
     return NextResponse.json({
       success: true,
