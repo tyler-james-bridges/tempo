@@ -1,4 +1,90 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+
+const EMAIL = "support@tempomap.app";
+
+function EmailButton() {
+  const [copied, setCopied] = useState(false);
+
+  const handleClick = async () => {
+    // Try mailto first
+    const mailtoLink = `mailto:${EMAIL}`;
+    const newWindow = window.open(mailtoLink, "_self");
+
+    // If mailto didn't work (no email client), copy to clipboard
+    setTimeout(async () => {
+      try {
+        await navigator.clipboard.writeText(EMAIL);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = EMAIL;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    }, 300);
+  };
+
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(EMAIL);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Fallback
+      const textArea = document.createElement("textarea");
+      textArea.value = EMAIL;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-3">
+      <button
+        onClick={handleClick}
+        className="btn-primary inline-flex items-center justify-center gap-2"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        Email Support
+      </button>
+      <button
+        onClick={copyEmail}
+        className="btn-secondary inline-flex items-center justify-center gap-2"
+      >
+        {copied ? (
+          <>
+            <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Copied!
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy Email
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
 
 export default function Support() {
   return (
@@ -29,15 +115,10 @@ export default function Support() {
             <p className="text-[#5C5C5C] leading-relaxed mb-4">
               Have a question, bug report, or feature request? We&apos;d love to hear from you.
             </p>
-            <a
-              href="mailto:support@tempomap.app"
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Email Support
-            </a>
+            <EmailButton />
+            <p className="text-[#8C8C8C] text-sm mt-3">
+              {EMAIL}
+            </p>
           </section>
 
           {/* FAQ */}
@@ -80,7 +161,7 @@ export default function Support() {
               <div className="card p-5">
                 <h3 className="font-medium text-[#1A1A1A] mb-2">How do I delete my account?</h3>
                 <p className="text-[#5C5C5C] text-sm leading-relaxed">
-                  Email us at support@tempomap.app and we&apos;ll delete your account and all associated
+                  Email us at {EMAIL} and we&apos;ll delete your account and all associated
                   data within 48 hours.
                 </p>
               </div>
@@ -114,7 +195,7 @@ export default function Support() {
               </div>
               <div>
                 <span className="text-[#8C8C8C]">Contact</span>
-                <p className="text-[#1A1A1A]">support@tempomap.app</p>
+                <p className="text-[#1A1A1A]">{EMAIL}</p>
               </div>
             </div>
           </section>
