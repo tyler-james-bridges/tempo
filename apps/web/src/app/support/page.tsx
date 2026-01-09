@@ -30,7 +30,7 @@ export default function Support() {
               Have a question, bug report, or feature request? We&apos;d love to hear from you.
             </p>
             <a
-              href="mailto:tylerscv22@gmail.com"
+              href="mailto:support@tempomap.app"
               className="btn-primary inline-flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -80,7 +80,7 @@ export default function Support() {
               <div className="card p-5">
                 <h3 className="font-medium text-[#1A1A1A] mb-2">How do I delete my account?</h3>
                 <p className="text-[#5C5C5C] text-sm leading-relaxed">
-                  Email us at tylerscv22@gmail.com and we&apos;ll delete your account and all associated
+                  Email us at support@tempomap.app and we&apos;ll delete your account and all associated
                   data within 48 hours.
                 </p>
               </div>
@@ -114,7 +114,7 @@ export default function Support() {
               </div>
               <div>
                 <span className="text-[#8C8C8C]">Contact</span>
-                <p className="text-[#1A1A1A]">tylerscv22@gmail.com</p>
+                <p className="text-[#1A1A1A]">support@tempomap.app</p>
               </div>
             </div>
           </section>

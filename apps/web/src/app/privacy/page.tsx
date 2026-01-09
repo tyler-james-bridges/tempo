@@ -142,8 +142,8 @@ export default function PrivacyPolicy() {
               If you have questions about this privacy policy or your data, contact us at:
             </p>
             <p className="text-[#5C5C5C] mt-2">
-              <a href="mailto:tylerscv22@gmail.com" className="text-[#E8913A] hover:underline">
-                tylerscv22@gmail.com
+              <a href="mailto:support@tempomap.app" className="text-[#E8913A] hover:underline">
+                support@tempomap.app
               </a>
             </p>
           </section>
