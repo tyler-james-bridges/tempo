@@ -1,0 +1,83 @@
+import { ExpoConfig, ConfigContext } from "expo/config";
+
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
+  name: "TempoMap",
+  slug: "tempomap",
+  entryPoint: "./index.ts",
+  version: "1.0.0",
+  orientation: "portrait",
+  icon: "./assets/icon.png",
+  userInterfaceStyle: "dark",
+  newArchEnabled: true,
+  owner: "your-expo-username",
+  splash: {
+    image: "./assets/splash-icon.png",
+    resizeMode: "contain",
+    backgroundColor: "#050508",
+  },
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: "com.tempomap.app",
+    buildNumber: "1",
+    config: {
+      usesNonExemptEncryption: false,
+    },
+    infoPlist: {
+      UIBackgroundModes: ["audio"],
+      NSMicrophoneUsageDescription:
+        "TempoMap uses the microphone for tap tempo detection and audio calibration features.",
+      ITSAppUsesNonExemptEncryption: false,
+      LSApplicationQueriesSchemes: ["mailto"],
+      CFBundleAllowMixedLocalizations: true,
+    },
+    privacyManifests: {
+      NSPrivacyAccessedAPITypes: [
+        {
+          NSPrivacyAccessedAPIType:
+            "NSPrivacyAccessedAPICategoryUserDefaults",
+          NSPrivacyAccessedAPITypeReasons: ["CA92.1"],
+        },
+      ],
+    },
+  },
+  android: {
+    adaptiveIcon: {
+      foregroundImage: "./assets/adaptive-icon.png",
+      backgroundColor: "#050508",
+    },
+    edgeToEdgeEnabled: true,
+    package: "com.tempomap.app",
+    versionCode: 1,
+    permissions: [
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+      "android.permission.VIBRATE",
+    ],
+  },
+  web: {
+    favicon: "./assets/favicon.png",
+  },
+  plugins: [
+    [
+      "react-native-audio-api",
+      {
+        iosBackgroundMode: true,
+      },
+    ],
+    "expo-build-properties",
+  ],
+  extra: {
+    eas: {
+      projectId: "your-eas-project-id",
+    },
+    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  },
+  updates: {
+    url: "https://u.expo.dev/your-eas-project-id",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
+});

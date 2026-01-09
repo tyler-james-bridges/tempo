@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -20,19 +21,60 @@ interface ExtractedPart {
   measure_end: number | null;
 }
 
+// Validate UUID format
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { showId, pdfUrl } = await request.json();
 
-    if (!showId) {
+    if (!showId || typeof showId !== "string") {
       return NextResponse.json(
         { error: "Missing showId" },
         { status: 400 }
       );
     }
 
-    console.log(`Processing show ${showId}...`);
-    console.log(`PDF URL: ${pdfUrl}`);
+    if (!isValidUUID(showId)) {
+      return NextResponse.json(
+        { error: "Invalid showId format" },
+        { status: 400 }
+      );
+    }
+
+    // Check for internal service call (from upload route)
+    const internalSecret = request.headers.get("x-internal-secret");
+    const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
+
+    // If not internal call, verify user authentication and ownership
+    if (!isInternalCall) {
+      const supabase = await createServerSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        return NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 401 }
+        );
+      }
+
+      // Verify user owns this show
+      const { data: show } = await supabaseAdmin
+        .from("shows")
+        .select("user_id")
+        .eq("id", showId)
+        .single();
+
+      if (!show || show.user_id !== user.id) {
+        return NextResponse.json(
+          { error: "Forbidden" },
+          { status: 403 }
+        );
+      }
+    }
 
     // Update status to processing
     await supabaseAdmin
@@ -42,7 +84,6 @@ export async function POST(request: NextRequest) {
 
     try {
       // Fetch the PDF
-      console.log("Fetching PDF...");
       const pdfResponse = await fetch(pdfUrl);
       if (!pdfResponse.ok) {
         throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
@@ -50,10 +91,8 @@ export async function POST(request: NextRequest) {
 
       const pdfBuffer = await pdfResponse.arrayBuffer();
       const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
-      console.log(`PDF fetched, size: ${pdfBuffer.byteLength} bytes`);
 
       // Send to Claude for analysis
-      console.log("Sending to Claude for analysis...");
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
@@ -107,8 +146,6 @@ IMPORTANT: Return ONLY the JSON array, no other text or explanation.`,
         ? message.content[0].text
         : "";
 
-      console.log("Claude response:", responseText);
-
       // Extract JSON from response (handle potential markdown code blocks)
       let jsonStr = responseText.trim();
       if (jsonStr.startsWith("```json")) {
@@ -124,17 +161,13 @@ IMPORTANT: Return ONLY the JSON array, no other text or explanation.`,
       let extractedParts: ExtractedPart[];
       try {
         extractedParts = JSON.parse(jsonStr);
-      } catch (parseError) {
-        console.error("Failed to parse Claude response as JSON:", parseError);
-        console.error("Raw response:", responseText);
+      } catch {
         throw new Error("Failed to parse tempo data from PDF");
       }
 
       if (!Array.isArray(extractedParts) || extractedParts.length === 0) {
         throw new Error("No tempo data extracted from PDF");
       }
-
-      console.log(`Extracted ${extractedParts.length} parts from PDF`);
 
       // Insert parts into database
       const partsToInsert = extractedParts.map((part, index) => ({
@@ -160,8 +193,6 @@ IMPORTANT: Return ONLY the JSON array, no other text or explanation.`,
         .from("shows")
         .update({ status: "ready" })
         .eq("id", showId);
-
-      console.log(`Show ${showId} processed successfully with ${extractedParts.length} parts`);
 
       return NextResponse.json({
         success: true,
