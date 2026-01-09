@@ -102,66 +102,84 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Feature Cards */}
-          <div id="how-it-works" className="grid md:grid-cols-3 gap-6 text-left">
-            <div className="card p-6">
-              <div className="w-12 h-12 rounded-xl bg-[#E8913A]/10 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-[#E8913A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          {/* How It Works - Pipeline Style */}
+          <div id="how-it-works" className="max-w-4xl mx-auto">
+            {/* Pipeline Container */}
+            <div className="pipeline-container">
+              {/* Music Staff (5 lines) with animated glow */}
+              <div className="pipeline-staff">
+                <svg viewBox="0 0 400 24" preserveAspectRatio="none" className="staff-svg">
+                  <line x1="0" y1="2" x2="400" y2="2" />
+                  <line x1="0" y1="7" x2="400" y2="7" />
+                  <line x1="0" y1="12" x2="400" y2="12" />
+                  <line x1="0" y1="17" x2="400" y2="17" />
+                  <line x1="0" y1="22" x2="400" y2="22" />
                 </svg>
+                <div className="staff-glow" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-[#1A1A1A]">Upload PDFs</h3>
-              <p className="text-[#5C5C5C] text-sm leading-relaxed">
-                Drag & drop sheet music PDFs. Supports scanned and digital scores.
-              </p>
-            </div>
 
-            <div className="card p-6">
-              <div className="w-12 h-12 rounded-xl bg-[#E8913A]/10 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-[#E8913A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+              {/* Step 1: Upload */}
+              <div className="pipeline-step">
+                <div className="pipeline-node">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div className="pipeline-label">Upload PDF</div>
+                <div className="pipeline-detail">Digital or scanned scores</div>
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-[#1A1A1A]">AI analysis</h3>
-              <p className="text-[#5C5C5C] text-sm leading-relaxed">
-                AI extracts tempo markings, time signatures, and section markers.
-              </p>
-            </div>
 
-            <div className="card p-6">
-              <div className="w-12 h-12 rounded-xl bg-[#E8913A]/10 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-[#E8913A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
+              {/* Step 2: AI Analysis */}
+              <div className="pipeline-step">
+                <div className="pipeline-node">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                  </svg>
+                </div>
+                <div className="pipeline-label">AI Analysis</div>
+                <div className="pipeline-detail">Reads tempo, time sig, rehearsals</div>
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-[#1A1A1A]">Sync to app</h3>
-              <p className="text-[#5C5C5C] text-sm leading-relaxed">
-                Tempo maps appear instantly in the TempoMap app.
-              </p>
+
+              {/* Step 3: Sync */}
+              <div className="pipeline-step">
+                <div className="pipeline-node">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                  </svg>
+                </div>
+                <div className="pipeline-label">Sync to App</div>
+                <div className="pipeline-detail">Practice with click track</div>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
       {/* CTA Section */}
-      {!user && (
-        <section className="py-16 bg-[#F5F4F2]">
-          <div className="max-w-2xl mx-auto px-6 text-center">
-            <h2 className="text-2xl font-bold mb-3 text-[#1A1A1A]">
-              Ready to practice smarter?
-            </h2>
-            <p className="text-[#5C5C5C] mb-6">
-              Free to use. No credit card required.
+      <section className="py-16 bg-[#F5F4F2]">
+        <div className="max-w-2xl mx-auto px-6 text-center">
+          <h2 className="text-2xl font-bold mb-3 text-[#1A1A1A]">
+            {user ? "Ready to upload?" : "Ready to practice smarter?"}
+          </h2>
+          <p className="text-[#5C5C5C] mb-6">
+            {user ? "Upload your sheet music and get tempo maps in seconds." : "Free to use. No credit card required."}
+          </p>
+          <Link
+            href={user ? "/dashboard" : "/signup"}
+            className="btn-primary text-base px-8 py-3 inline-flex items-center justify-center"
+          >
+            {user ? "Go to Dashboard" : "Create free account"}
+          </Link>
+          {!user && (
+            <p className="text-[#5C5C5C] text-sm mt-4">
+              Already have an account?{" "}
+              <Link href="/login" className="text-[#E8913A] hover:underline font-medium">
+                Log in
+              </Link>
             </p>
-            <Link
-              href="/signup"
-              className="btn-primary text-base px-8 py-3 inline-flex items-center justify-center"
-            >
-              Create free account
-            </Link>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="border-t border-[#E8E8E6] bg-white px-6 py-6">
