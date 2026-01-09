@@ -44,6 +44,34 @@ export default function ShowDetailPage() {
 
   useEffect(() => {
     loadShow();
+
+    // Subscribe to realtime updates for this show
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`show-${showId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "shows",
+          filter: `id=eq.${showId}`,
+        },
+        (payload) => {
+          const updatedShow = payload.new as Show;
+          setShow(updatedShow);
+
+          // If processing just completed, reload parts
+          if (updatedShow.status === "ready" || updatedShow.status === "error") {
+            loadShow();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [showId]);
 
   const loadShow = async () => {
