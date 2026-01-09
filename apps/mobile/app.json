@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "owner": "your-expo-username",
+    "owner": "tjames145",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -68,9 +68,7 @@
       "expo-build-properties"
     ],
     "extra": {
-      "eas": {
-        "projectId": "your-eas-project-id"
-      }
+      "eas": {}
     },
     "updates": {
       "url": "https://u.expo.dev/your-eas-project-id"
