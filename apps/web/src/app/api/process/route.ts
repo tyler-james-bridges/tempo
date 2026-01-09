@@ -13,6 +13,40 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
+// Retry helper with exponential backoff for rate limits
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 5000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if it's a rate limit error
+      const isRateLimit =
+        lastError.message?.includes("rate_limit") ||
+        lastError.message?.includes("429") ||
+        (error as { status?: number })?.status === 429;
+
+      if (!isRateLimit || attempt === maxRetries) {
+        throw lastError;
+      }
+
+      // Exponential backoff: 5s, 10s, 20s
+      const delayMs = baseDelayMs * Math.pow(2, attempt);
+      console.log(`Rate limited. Retrying in ${delayMs / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw lastError;
+}
+
 interface ExtractedPart {
   name: string;
   tempo: number;
@@ -92,25 +126,26 @@ export async function POST(request: NextRequest) {
       const pdfBuffer = await pdfResponse.arrayBuffer();
       const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
 
-      // Send to Claude for analysis
-      const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: pdfBase64,
+      // Send to Claude for analysis (with retry for rate limits)
+      const message = await withRetry(() =>
+        anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4096,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "document",
+                  source: {
+                    type: "base64",
+                    media_type: "application/pdf",
+                    data: pdfBase64,
+                  },
                 },
-              },
-              {
-                type: "text",
-                text: `Analyze this sheet music PDF and extract all tempo markings, time signatures, and section/movement names.
+                {
+                  type: "text",
+                  text: `Analyze this sheet music PDF and extract all tempo markings, time signatures, and section/movement names.
 
 For each distinct section or tempo change, provide:
 1. Section name (e.g., "Opener", "Movement 1", "Ballad", "Closer", or rehearsal marks like "A", "B", etc.)
@@ -135,11 +170,12 @@ If you can't find explicit tempo markings, make educated guesses based on tempo 
 If this appears to be marching band/drum corps music, common sections are: Opener, Movement 1/2/3, Ballad, Closer.
 
 IMPORTANT: Return ONLY the JSON array, no other text or explanation.`,
-              },
-            ],
-          },
-        ],
-      });
+                },
+              ],
+            },
+          ],
+        })
+      );
 
       // Parse Claude's response
       const responseText = message.content[0].type === "text"
@@ -204,14 +240,26 @@ IMPORTANT: Return ONLY the JSON array, no other text or explanation.`,
     } catch (processingError) {
       console.error("Processing error:", processingError);
 
+      // Format user-friendly error message
+      let errorMessage = "Unknown processing error";
+      if (processingError instanceof Error) {
+        if (processingError.message.includes("rate_limit")) {
+          errorMessage = "Rate limit exceeded. Please try again in a few minutes.";
+        } else if (processingError.message.includes("Failed to fetch PDF")) {
+          errorMessage = "Could not download the PDF. Please try uploading again.";
+        } else if (processingError.message.includes("Failed to parse")) {
+          errorMessage = "Could not extract tempo data from this PDF. Try a clearer scan.";
+        } else {
+          errorMessage = processingError.message;
+        }
+      }
+
       // Update show status to error
       await supabaseAdmin
         .from("shows")
         .update({
           status: "error",
-          error_message: processingError instanceof Error
-            ? processingError.message
-            : "Unknown processing error",
+          error_message: errorMessage,
         })
         .eq("id", showId);
 
