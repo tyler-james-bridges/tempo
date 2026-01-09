@@ -10,7 +10,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/icon.png",
   userInterfaceStyle: "dark",
   newArchEnabled: true,
-  owner: "your-expo-username",
+  owner: "tjames145",
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
@@ -69,7 +69,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   extra: {
     eas: {
-      projectId: "your-eas-project-id",
+      // projectId will be set by eas init
     },
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
