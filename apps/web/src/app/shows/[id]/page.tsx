@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { getStatusBadgeClass } from "@/lib/utils";
 
 interface Show {
   id: string;
@@ -150,19 +151,6 @@ export default function ShowDetailPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ready":
-        return "badge badge-ready";
-      case "processing":
-        return "badge badge-processing";
-      case "error":
-        return "badge badge-error";
-      default:
-        return "badge badge-pending";
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9]">
@@ -207,7 +195,7 @@ export default function ShowDetailPage() {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-bold text-[#1A1A1A]">{show.name}</h1>
-              <span className={getStatusBadge(show.status)}>{show.status}</span>
+              <span className={getStatusBadgeClass(show.status)}>{show.status}</span>
             </div>
             {show.source_filename && (
               <p className="text-[#5C5C5C] text-sm">{show.source_filename}</p>

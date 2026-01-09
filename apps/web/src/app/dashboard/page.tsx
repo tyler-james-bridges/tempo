@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { getStatusBadgeClass } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import type { CloudShow } from "@tempo/shared";
 
@@ -110,19 +111,6 @@ export default function DashboardPage() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ready":
-        return "badge badge-ready";
-      case "processing":
-        return "badge badge-processing";
-      case "error":
-        return "badge badge-error";
-      default:
-        return "badge badge-pending";
-    }
   };
 
   if (loading) {
@@ -244,7 +232,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className={getStatusBadge(show.status)}>
+                  <span className={getStatusBadgeClass(show.status)}>
                     {show.status}
                   </span>
                   <span className="text-[#8C8C8C] text-sm">
