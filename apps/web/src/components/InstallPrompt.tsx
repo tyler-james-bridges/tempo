@@ -107,6 +107,9 @@ export function InstallPrompt(): React.ReactNode {
 
   return (
     <>
+      {/* Spacer to prevent content from being hidden behind fixed banner */}
+      <div className="h-[200px] sm:h-[140px]" aria-hidden="true" />
+
       <div
         className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4 animate-fade-in"
         role="dialog"
