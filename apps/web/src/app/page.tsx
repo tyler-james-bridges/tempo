@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
 export default function Home() {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +32,12 @@ export default function Home() {
           </Link>
 
           <nav className="flex items-center gap-4">
+            <Link
+              href="/metronome"
+              className="text-[#5C5C5C] hover:text-[#1A1A1A] transition-colors text-sm font-medium"
+            >
+              Metronome
+            </Link>
             {loading ? (
               <div className="w-20 h-8" />
             ) : user ? (
@@ -95,10 +99,13 @@ export default function Home() {
               {user ? "Go to Dashboard" : "Get started free"}
             </Link>
             <Link
-              href="#how-it-works"
+              href="/metronome"
               className="btn-secondary text-base px-8 py-3 inline-flex items-center justify-center gap-2"
             >
-              How it works
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+              </svg>
+              Try Metronome
             </Link>
           </div>
 
@@ -186,6 +193,9 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-[#8C8C8C] text-sm">© {new Date().getFullYear()} TempoMap</span>
           <div className="flex items-center gap-6">
+            <Link href="/metronome" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
+              Metronome
+            </Link>
             <Link href="/privacy" className="text-[#8C8C8C] hover:text-[#5C5C5C] text-sm transition-colors">
               Privacy
             </Link>
