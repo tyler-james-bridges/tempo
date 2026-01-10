@@ -20,6 +20,12 @@ declare global {
 const STORAGE_KEY = "pwa-install-prompt-dismissed";
 const DISMISS_DURATION_DAYS = 7;
 
+function isMobileDevice(): boolean {
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(userAgent) ||
+    (/macintosh/.test(userAgent) && navigator.maxTouchPoints > 1);
+}
+
 function isIOSDevice(): boolean {
   const userAgent = window.navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(userAgent);
@@ -48,7 +54,7 @@ export function InstallPrompt(): React.ReactNode {
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    if (isStandaloneMode() || wasRecentlyDismissed()) return;
+    if (!isMobileDevice() || isStandaloneMode() || wasRecentlyDismissed()) return;
 
     const ios = isIOSDevice();
     setIsIOS(ios);
