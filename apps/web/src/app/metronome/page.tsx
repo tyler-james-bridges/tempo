@@ -175,6 +175,7 @@ export default function MetronomePage() {
           activePartId={showManager.show.activePartId}
           onSelectPart={handleSelectPart}
           onOpenSettings={() => setShowSettings(true)}
+          onClearShow={showManager.clearShow}
         />
       )}
 

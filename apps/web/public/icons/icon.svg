@@ -6,29 +6,11 @@
     </linearGradient>
   </defs>
 
-  <!-- Background -->
+  <!-- Background with rounded corners -->
   <rect width="512" height="512" rx="96" fill="url(#bgGradient)"/>
 
-  <!-- Music Staff Lines -->
-  <g stroke="rgba(255,255,255,0.3)" stroke-width="4">
-    <line x1="80" y1="180" x2="432" y2="180"/>
-    <line x1="80" y1="210" x2="432" y2="210"/>
-    <line x1="80" y1="240" x2="432" y2="240"/>
-    <line x1="80" y1="270" x2="432" y2="270"/>
-    <line x1="80" y1="300" x2="432" y2="300"/>
-  </g>
-
-  <!-- Tempo/Metronome Symbol -->
-  <g fill="white">
-    <!-- Metronome body -->
-    <path d="M256 350 L196 420 L316 420 Z" opacity="0.9"/>
-    <rect x="248" y="160" width="16" height="200" rx="4"/>
-
-    <!-- Pendulum -->
-    <path d="M256 180 L220 280" stroke="white" stroke-width="8" stroke-linecap="round"/>
-    <circle cx="220" cy="280" r="16" fill="white"/>
-
-    <!-- Speed indicator -->
-    <text x="256" y="400" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">BPM</text>
+  <!-- Musical Note Icon (centered and scaled) -->
+  <g transform="translate(128, 96) scale(10.67)">
+    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" fill="white"/>
   </g>
 </svg>

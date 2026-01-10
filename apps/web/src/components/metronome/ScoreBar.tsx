@@ -8,9 +8,10 @@ interface ScoreBarProps {
   activePartId: string | null;
   onSelectPart: (part: Part) => void;
   onOpenSettings: () => void;
+  onClearShow: () => void;
 }
 
-export function ScoreBar({ showName, parts, activePartId, onSelectPart, onOpenSettings }: ScoreBarProps) {
+export function ScoreBar({ showName, parts, activePartId, onSelectPart, onOpenSettings, onClearShow }: ScoreBarProps) {
   if (parts.length === 0) return null;
 
   return (
@@ -45,6 +46,17 @@ export function ScoreBar({ showName, parts, activePartId, onSelectPart, onOpenSe
             );
           })}
         </div>
+
+        {/* Clear button */}
+        <button
+          onClick={onClearShow}
+          className="flex-shrink-0 p-1.5 rounded-full text-white/40 hover:text-white/80 hover:bg-white/10 transition-all"
+          title="Clear show"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     </div>
   );

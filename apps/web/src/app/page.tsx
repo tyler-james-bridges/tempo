@@ -31,10 +31,10 @@ export default function Home() {
             <span className="text-xl font-bold tracking-tight text-[#1A1A1A]">TempoMap</span>
           </Link>
 
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/metronome"
-              className="text-[#5C5C5C] hover:text-[#1A1A1A] transition-colors text-sm font-medium"
+              className="hidden sm:block text-[#5C5C5C] hover:text-[#1A1A1A] transition-colors text-sm font-medium"
             >
               Metronome
             </Link>
@@ -43,7 +43,7 @@ export default function Home() {
             ) : user ? (
               <Link
                 href="/dashboard"
-                className="btn-primary text-sm"
+                className="btn-primary text-xs sm:text-sm px-3 sm:px-4 py-2"
               >
                 Dashboard
               </Link>
@@ -51,15 +51,15 @@ export default function Home() {
               <>
                 <Link
                   href="/login"
-                  className="text-[#5C5C5C] hover:text-[#1A1A1A] transition-colors text-sm font-medium"
+                  className="text-[#5C5C5C] hover:text-[#1A1A1A] transition-colors text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
                   Log in
                 </Link>
                 <Link
                   href="/signup"
-                  className="btn-primary text-sm"
+                  className="btn-primary text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap"
                 >
-                  Sign up free
+                  Sign up
                 </Link>
               </>
             )}
