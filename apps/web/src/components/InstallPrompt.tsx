@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -20,105 +20,87 @@ declare global {
 const STORAGE_KEY = "pwa-install-prompt-dismissed";
 const DISMISS_DURATION_DAYS = 7;
 
-export function InstallPrompt() {
+function isIOSDevice(): boolean {
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(userAgent);
+  const isMacWithTouch = /macintosh/.test(userAgent) && navigator.maxTouchPoints > 1;
+  return isIOS || isMacWithTouch;
+}
+
+function isStandaloneMode(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+function wasRecentlyDismissed(): boolean {
+  const dismissedAt = localStorage.getItem(STORAGE_KEY);
+  if (!dismissedAt) return false;
+  const daysSinceDismissal = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
+  return daysSinceDismissal < DISMISS_DURATION_DAYS;
+}
+
+export function InstallPrompt(): React.ReactNode {
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed (standalone mode)
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone ===
-        true;
-    setIsStandalone(standalone);
+    if (isStandaloneMode() || wasRecentlyDismissed()) return;
 
-    // Detect iOS
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const ios = /iphone|ipad|ipod/.test(userAgent);
+    const ios = isIOSDevice();
     setIsIOS(ios);
 
-    // Check if user previously dismissed the prompt
-    const dismissedAt = localStorage.getItem(STORAGE_KEY);
-    if (dismissedAt) {
-      const dismissedDate = new Date(parseInt(dismissedAt, 10));
-      const daysSinceDismissal =
-        (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceDismissal < DISMISS_DURATION_DAYS) {
-        return; // Don't show prompt if recently dismissed
-      }
-    }
-
-    // For Android/Chrome - listen for beforeinstallprompt
-    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+    function handleBeforeInstallPrompt(e: BeforeInstallPromptEvent): void {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowPrompt(true);
-    };
+    }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // For iOS Safari - show prompt after a short delay if not standalone
-    if (ios && !standalone) {
-      const timer = setTimeout(() => {
-        setShowPrompt(true);
-      }, 3000); // Show after 3 seconds
+    if (ios) {
+      const timer = setTimeout(() => setShowPrompt(true), 3000);
       return () => {
         clearTimeout(timer);
-        window.removeEventListener(
-          "beforeinstallprompt",
-          handleBeforeInstallPrompt
-        );
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       };
     }
 
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt
-      );
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
 
-  const handleInstallClick = useCallback(async () => {
+  async function handleInstallClick(): Promise<void> {
     if (isIOS) {
       setShowIOSInstructions(true);
       return;
     }
-
     if (!deferredPrompt) return;
 
-    try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-
-      if (outcome === "accepted") {
-        setShowPrompt(false);
-      }
-
-      setDeferredPrompt(null);
-    } catch (error) {
-      console.error("Error prompting install:", error);
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setShowPrompt(false);
     }
-  }, [deferredPrompt, isIOS]);
+    setDeferredPrompt(null);
+  }
 
-  const handleDismiss = useCallback(() => {
+  function handleDismiss(): void {
     localStorage.setItem(STORAGE_KEY, Date.now().toString());
     setShowPrompt(false);
     setShowIOSInstructions(false);
-  }, []);
+  }
 
-  // Don't render if already in standalone mode or prompt shouldn't show
-  if (isStandalone || !showPrompt) {
+  if (!showPrompt) {
     return null;
   }
 
   return (
     <>
-      {/* Install Banner */}
       <div
         className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-fade-in"
         role="dialog"
@@ -127,7 +109,6 @@ export function InstallPrompt() {
       >
         <div className="mx-auto max-w-lg rounded-xl bg-white border border-[var(--border-subtle)] shadow-lg p-4">
           <div className="flex items-start gap-4">
-            {/* App Icon */}
             <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[var(--accent-primary)] flex items-center justify-center">
               <svg
                 width="24"
@@ -178,7 +159,6 @@ export function InstallPrompt() {
               </div>
             </div>
 
-            {/* Close button */}
             <button
               onClick={handleDismiss}
               className="flex-shrink-0 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
@@ -204,7 +184,6 @@ export function InstallPrompt() {
         </div>
       </div>
 
-      {/* iOS Instructions Modal */}
       {showIOSInstructions && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50"

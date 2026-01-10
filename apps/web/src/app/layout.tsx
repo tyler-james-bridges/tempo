@@ -12,9 +12,6 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "TempoMap",
   },
-  formatDetection: {
-    telephone: false,
-  },
   openGraph: {
     title: "TempoMap - Upload Sheet Music, Get Tempo Maps",
     description:
@@ -43,8 +40,6 @@ export const viewport: Viewport = {
   themeColor: "#FAFAF9",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
 
@@ -52,33 +47,10 @@ export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>): React.ReactNode {
   return (
     <html lang="en">
       <head>
-        {/* PWA iOS specific meta tags */}
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="TempoMap" />
-        <link
-          rel="apple-touch-icon"
-          href="/icons/icon-192x192.png"
-          sizes="192x192"
-        />
-        <link
-          rel="apple-touch-icon"
-          href="/icons/icon-512x512.png"
-          sizes="512x512"
-        />
-
-        {/* Splash screen for iOS */}
-        <meta name="mobile-web-app-capable" content="yes" />
-
-        {/* Microsoft Tiles */}
-        <meta name="msapplication-TileColor" content="#FAFAF9" />
-        <meta name="msapplication-tap-highlight" content="no" />
-
-        {/* Preconnect to important origins */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

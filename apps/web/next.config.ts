@@ -8,6 +8,9 @@ const withPWA = withPWAInit({
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
+  fallbacks: {
+    document: "/offline",
+  },
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: true,
@@ -23,13 +26,6 @@ const withPWA = withPWAInit({
             maxAgeSeconds: 60 * 60, // 1 hour
           },
           networkTimeoutSeconds: 10,
-        },
-      },
-      {
-        urlPattern: /^https:\/\/api\.anthropic\.com\/.*$/i,
-        handler: "NetworkOnly",
-        options: {
-          cacheName: "anthropic-api",
         },
       },
       {
