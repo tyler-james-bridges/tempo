@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import type { SoundType, SubdivisionType, AccentPattern } from "@/hooks/useMetronome";
+import type { CloudSyncHook } from "@/hooks/useCloudSync";
+import type { ShowHook } from "@/hooks/useShow";
+import { CloudShowsPanel } from "./CloudShowsPanel";
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -20,9 +23,11 @@ interface SettingsPanelProps {
   setAccentPattern: (pattern: AccentPattern) => void;
   countInEnabled: boolean;
   setCountInEnabled: (enabled: boolean) => void;
+  cloudSync?: CloudSyncHook;
+  showManager?: ShowHook;
 }
 
-const TABS = ["Tempo", "Sound", "Rhythm"] as const;
+const TABS = ["Shows", "Tempo", "Sound", "Rhythm"] as const;
 type Tab = (typeof TABS)[number];
 
 const TIME_SIGNATURES = [
@@ -68,8 +73,10 @@ export function SettingsPanel({
   setAccentPattern,
   countInEnabled,
   setCountInEnabled,
+  cloudSync,
+  showManager,
 }: SettingsPanelProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("Tempo");
+  const [activeTab, setActiveTab] = useState<Tab>("Shows");
 
   if (!isOpen) return null;
 
@@ -112,6 +119,20 @@ export function SettingsPanel({
 
         {/* Content */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
+          {activeTab === "Shows" && cloudSync && showManager && (
+            <CloudShowsPanel
+              cloudSync={cloudSync}
+              showManager={showManager}
+              onShowImported={onClose}
+            />
+          )}
+
+          {activeTab === "Shows" && (!cloudSync || !showManager) && (
+            <div className="text-center py-8">
+              <p className="text-white/50 text-sm">Cloud sync not available</p>
+            </div>
+          )}
+
           {activeTab === "Tempo" && (
             <div className="space-y-6">
               {/* Tempo slider */}
