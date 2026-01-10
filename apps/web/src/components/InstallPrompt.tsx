@@ -108,131 +108,41 @@ export function InstallPrompt(): React.ReactNode {
   return (
     <>
       {/* Spacer to prevent content from being hidden behind fixed banner */}
-      <div className="h-[200px] sm:h-[140px]" aria-hidden="true" />
+      <div className="h-16" aria-hidden="true" />
 
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4 animate-fade-in"
+        className="fixed bottom-0 left-0 right-0 z-50 animate-fade-in"
         role="dialog"
         aria-labelledby="install-prompt-title"
-        aria-describedby="install-prompt-description"
       >
-        <div className="relative mx-auto max-w-lg rounded-xl bg-white border border-[var(--border-subtle)] shadow-lg p-4 sm:p-4">
-          {/* Close button - absolute positioned on mobile for better layout */}
-          <button
-            onClick={handleDismiss}
-            className="absolute top-3 right-3 sm:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-            aria-label="Dismiss install prompt"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M15 5L5 15M5 5L15 15"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-
-          <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-            {/* Icon and text container - horizontal on mobile, part of row on desktop */}
-            <div className="flex items-start gap-3 sm:gap-4 sm:flex-1 sm:min-w-0">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[var(--accent-primary)] flex items-center justify-center">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-white"
-                >
+        <div className="bg-[#1A1A1A] text-white px-4 py-3">
+          <div className="mx-auto max-w-lg flex items-center justify-between gap-3">
+            <p id="install-prompt-title" className="text-sm flex-1">
+              Add to home screen for the best experience
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleInstallClick}
+                className="bg-[#E8913A] hover:bg-[#d4822e] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+              >
+                {isIOS ? "How to" : "Install"}
+              </button>
+              <button
+                onClick={handleDismiss}
+                className="p-2 text-white/60 hover:text-white transition-colors"
+                aria-label="Dismiss"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path
-                    d="M9 19V13H15V19M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+                    d="M15 5L5 15M5 5L15 15"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
-
-              <div className="flex-1 min-w-0 pr-8 sm:pr-0">
-                <h3
-                  id="install-prompt-title"
-                  className="text-base font-semibold text-[var(--text-primary)]"
-                >
-                  Install TempoMap
-                </h3>
-                <p
-                  id="install-prompt-description"
-                  className="mt-1 text-sm text-[var(--text-secondary)]"
-                >
-                  Add to your home screen for quick access and a native app
-                  experience.
-                </p>
-
-                {/* Desktop buttons - inline with text */}
-                <div className="hidden sm:flex mt-3 gap-2">
-                  <button
-                    onClick={handleInstallClick}
-                    className="btn-primary text-sm py-2 px-4"
-                  >
-                    {isIOS ? "How to Install" : "Install"}
-                  </button>
-                  <button
-                    onClick={handleDismiss}
-                    className="btn-secondary text-sm py-2 px-4"
-                  >
-                    Not now
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile buttons - full width, stacked below content */}
-            <div className="flex sm:hidden flex-col gap-2 w-full">
-              <button
-                onClick={handleInstallClick}
-                className="btn-primary text-sm py-3 px-4 w-full min-h-[44px]"
-              >
-                {isIOS ? "How to Install" : "Install"}
-              </button>
-              <button
-                onClick={handleDismiss}
-                className="btn-secondary text-sm py-3 px-4 w-full min-h-[44px]"
-              >
-                Not now
               </button>
             </div>
-
-            {/* Desktop close button */}
-            <button
-              onClick={handleDismiss}
-              className="hidden sm:flex flex-shrink-0 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-              aria-label="Dismiss install prompt"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M15 5L5 15M5 5L15 15"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
