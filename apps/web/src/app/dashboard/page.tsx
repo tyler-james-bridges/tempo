@@ -136,6 +136,12 @@ export default function DashboardPage() {
           </Link>
 
           <div className="flex items-center gap-4">
+            <Link
+              href="/metronome"
+              className="btn-primary text-sm"
+            >
+              Open Metronome
+            </Link>
             <span className="text-[#5C5C5C] text-sm hidden sm:block">{user?.email}</span>
             <Link
               href="/settings"
