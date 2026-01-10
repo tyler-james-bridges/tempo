@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useMetronome } from "@/hooks/useMetronome";
 import { useShow, type Part } from "@/hooks/useShow";
+import { useCloudSync } from "@/hooks/useCloudSync";
 import { BeatRing } from "@/components/metronome/BeatRing";
 import { TempoControls } from "@/components/metronome/TempoControls";
 import { SettingsPanel } from "@/components/metronome/SettingsPanel";
@@ -27,6 +28,7 @@ export default function MetronomePage() {
 
   const metronome = useMetronome();
   const showManager = useShow();
+  const cloudSync = useCloudSync(user?.id ?? null);
   const {
     tempo,
     beats,
@@ -264,6 +266,8 @@ export default function MetronomePage() {
         setAccentPattern={setAccentPattern}
         countInEnabled={countInEnabled}
         setCountInEnabled={setCountInEnabled}
+        cloudSync={cloudSync}
+        showManager={showManager}
       />
     </div>
   );
