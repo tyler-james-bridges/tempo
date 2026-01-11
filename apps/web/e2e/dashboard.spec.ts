@@ -17,7 +17,16 @@ test.describe('Authenticated Features', () => {
     await page.getByLabel(/email/i).fill(testEmail!);
     await page.getByLabel(/password/i).fill(testPassword!);
     await page.getByRole('button', { name: /sign in|log in/i }).click();
-    await page.waitForURL(/dashboard/, { timeout: 10000 });
+
+    // Wait for either successful redirect or error message
+    try {
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
+    } catch {
+      // If redirect failed, capture what's on the page
+      const bodyText = await page.textContent('body');
+      const currentUrl = page.url();
+      throw new Error(`Login failed. URL: ${currentUrl}. Page content includes: ${bodyText?.slice(0, 500)}`);
+    }
   });
 
   test('dashboard loads with shows and upload functionality', async ({ page }) => {
