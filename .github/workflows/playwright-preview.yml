@@ -1,0 +1,99 @@
+name: Playwright Tests (Preview)
+
+# Run tests against Vercel preview deployments
+on:
+  deployment_status:
+
+jobs:
+  test:
+    name: Test Preview Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'Preview'
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (root)
+        run: npm ci
+        working-directory: .
+
+      - name: Install dependencies (web)
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright tests against preview
+        run: npm test
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-preview
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-screenshots-preview
+          path: apps/web/test-results/
+          retention-days: 7
+
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        if: always() && github.event.deployment_status.environment == 'Preview'
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Try to find the PR number
+            const { data: deployments } = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              per_page: 1
+            });
+
+            if (!deployments.length) return;
+
+            // Get PRs associated with this SHA
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha
+            });
+
+            if (!prs.length) return;
+
+            const prNumber = prs[0].number;
+            const previewUrl = '${{ github.event.deployment_status.target_url }}';
+            const passed = '${{ job.status }}' === 'success';
+
+            const body = passed
+              ? `## ✅ Playwright Tests Passed\n\nAll tests passed against [preview deployment](${previewUrl}).\n\n[View Test Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+              : `## ❌ Playwright Tests Failed\n\nSome tests failed against [preview deployment](${previewUrl}).\n\n[View Test Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });
