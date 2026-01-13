@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useMetronome } from "@/hooks/useMetronome";
@@ -21,7 +20,6 @@ const SUBDIVISIONS = [
 ] as const;
 
 export default function MetronomePage() {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -57,11 +55,8 @@ export default function MetronomePage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setLoading(false);
-      if (!user) {
-        router.push("/login");
-      }
     });
-  }, [router]);
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
