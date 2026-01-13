@@ -47,8 +47,11 @@ test.describe('Authentication', () => {
   test('protected routes redirect to login when unauthenticated', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/login/);
+  });
 
+  test('metronome is accessible without authentication', async ({ page }) => {
     await page.goto('/metronome');
-    await expect(page).toHaveURL(/login/);
+    await expect(page).toHaveURL(/metronome/);
+    await expect(page.getByText(/BPM/i)).toBeVisible();
   });
 });
