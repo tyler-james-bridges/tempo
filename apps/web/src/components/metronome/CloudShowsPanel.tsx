@@ -4,9 +4,10 @@
  * CloudShowsPanel - Cloud sync section for settings
  *
  * Shows the user's cloud shows and allows importing them into the metronome.
+ * Also allows uploading new sheet music PDFs directly.
  */
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { CloudSyncHook } from "@/hooks/useCloudSync";
 import type { ShowHook } from "@/hooks/useShow";
 
@@ -26,6 +27,9 @@ export function CloudShowsPanel({
     showId: string;
     showName: string;
   } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   const handleImportShow = async (showId: string, showName: string) => {
     // If there's an existing show, confirm replacement
@@ -57,6 +61,73 @@ export function CloudShowsPanel({
       month: "short",
       day: "numeric",
     });
+  };
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  }, []);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleFile = async (file: File) => {
+    setUploadError(null);
+
+    if (file.type !== "application/pdf") {
+      setUploadError("Please upload a PDF file");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("File size must be under 10MB");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Upload failed");
+      }
+
+      // Refresh the shows list to include the new upload
+      await cloudSync.fetchShows();
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Upload failed"
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -108,17 +179,70 @@ export function CloudShowsPanel({
         </div>
       )}
 
+      {/* Upload Zone */}
+      <div
+        className={`relative rounded-xl border-2 border-dashed transition-colors ${
+          dragActive
+            ? "border-[#E8913A] bg-[#E8913A]/10"
+            : "border-white/20 hover:border-white/30"
+        } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <label className="flex flex-col items-center justify-center py-6 cursor-pointer">
+          {uploading ? (
+            <>
+              <div className="w-6 h-6 border-2 border-[#E8913A] border-t-transparent rounded-full animate-spin mb-2" />
+              <span className="text-sm text-white/60">Processing PDF...</span>
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-8 h-8 text-white/40 mb-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              <span className="text-sm text-white/60">
+                Drop PDF here or <span className="text-[#E8913A]">browse</span>
+              </span>
+              <span className="text-xs text-white/30 mt-1">Max 10MB</span>
+            </>
+          )}
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={handleFileInput}
+            className="hidden"
+            disabled={uploading}
+          />
+        </label>
+      </div>
+
+      {/* Upload Error */}
+      {uploadError && (
+        <div className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">
+          {uploadError}
+        </div>
+      )}
+
       {/* Shows List */}
       {cloudSync.loading && cloudSync.readyShows.length === 0 ? (
         <div className="flex items-center justify-center py-8">
           <div className="w-6 h-6 border-2 border-[#E8913A] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : cloudSync.readyShows.length === 0 ? (
-        <div className="text-center py-8 bg-[#1A1A1A] rounded-xl border border-white/5">
-          <p className="text-white/50 text-sm">No shows yet</p>
-          <p className="text-white/30 text-xs mt-1">
-            Upload sheet music from the dashboard
-          </p>
+        <div className="text-center py-4">
+          <p className="text-white/30 text-xs">No shows yet</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-[300px] overflow-y-auto">
