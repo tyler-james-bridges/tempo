@@ -1,0 +1,282 @@
+name: Tests + AI QA
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+jobs:
+  playwright:
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    outputs:
+      total: ${{ steps.results.outputs.total }}
+      passed: ${{ steps.results.outputs.passed }}
+      failed: ${{ steps.results.outputs.failed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (root)
+        run: npm ci
+        working-directory: .
+
+      - name: Install dependencies (web)
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Build app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Start production server
+        run: npm run start &
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Wait for server to be ready
+        run: npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: Run Playwright tests
+        id: tests
+        run: npx playwright test --reporter=html,json
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Parse test results
+        id: results
+        run: |
+          if [ -f "test-results.json" ]; then
+            total=$(jq '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' test-results.json 2>/dev/null || echo "0")
+            passed=$(jq '.stats.expected' test-results.json 2>/dev/null || echo "0")
+            failed=$(jq '.stats.unexpected' test-results.json 2>/dev/null || echo "0")
+            echo "total=$total" >> $GITHUB_OUTPUT
+            echo "passed=$passed" >> $GITHUB_OUTPUT
+            echo "failed=$failed" >> $GITHUB_OUTPUT
+          else
+            echo "total=0" >> $GITHUB_OUTPUT
+            echo "passed=0" >> $GITHUB_OUTPUT
+            echo "failed=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 14
+
+      - name: Upload test screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-screenshots
+          path: apps/web/test-results/
+          retention-days: 7
+
+  ai-qa:
+    name: AI QA Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+
+    outputs:
+      score: ${{ steps.qa.outputs.score }}
+      bugs: ${{ steps.qa.outputs.bugs }}
+
+    steps:
+      - name: Wait for Vercel Preview
+        id: vercel
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 300
+          check_interval: 10
+
+      - name: Checkout ai-qa-engineer
+        uses: actions/checkout@v4
+        with:
+          repository: tyler-james-bridges/ai-qa-engineer
+          ref: main
+          path: ai-qa-engineer
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ai-qa-engineer/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ai-qa-engineer
+
+      - name: Install Playwright
+        run: npx playwright install chromium --with-deps
+        working-directory: ai-qa-engineer
+
+      - name: Run AI QA Analysis
+        id: qa
+        run: |
+          node src/index.js
+
+          # Parse results for output
+          if [ -f "qa-report.json" ]; then
+            score=$(jq '.score' qa-report.json 2>/dev/null || echo "null")
+            bugs=$(jq '.bugs | length' qa-report.json 2>/dev/null || echo "0")
+            echo "score=$score" >> $GITHUB_OUTPUT
+            echo "bugs=$bugs" >> $GITHUB_OUTPUT
+          fi
+        working-directory: ai-qa-engineer
+        env:
+          URL: ${{ steps.vercel.outputs.url }}
+          VIEWPORTS: desktop,mobile
+          FOCUS: all
+          OUTPUT_FORMAT: all
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        continue-on-error: true
+
+      - name: Upload AI QA Screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-qa-screenshots
+          path: ai-qa-engineer/screenshots/
+          retention-days: 14
+
+      - name: Upload AI QA Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-qa-report
+          path: |
+            ai-qa-engineer/qa-report.md
+            ai-qa-engineer/qa-report.json
+          retention-days: 14
+
+  post-results:
+    name: Post Results to PR
+    runs-on: ubuntu-latest
+    needs: [playwright, ai-qa]
+    if: always() && github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Download AI QA Report
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-qa-report
+          path: ai-qa-report
+        continue-on-error: true
+
+      - name: Post Combined Results to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Build comment
+            let comment = '## 🎭 Test Results\n\n';
+
+            // Playwright results
+            const total = '${{ needs.playwright.outputs.total }}' || '0';
+            const passed = '${{ needs.playwright.outputs.passed }}' || '0';
+            const failed = '${{ needs.playwright.outputs.failed }}' || '0';
+
+            comment += '### 🧪 Playwright Tests\n\n';
+
+            if (total !== '0' && total !== '') {
+              const passRate = ((parseInt(passed) / parseInt(total)) * 100).toFixed(0);
+              const statusEmoji = failed === '0' ? '✅' : '❌';
+
+              comment += `| ${statusEmoji} | ${passed}/${total} passed | ${passRate}% pass rate |\n`;
+              comment += `|---|---|---|\n\n`;
+
+              if (failed !== '0') {
+                comment += `⚠️ **${failed} test(s) failed** - check the Playwright report for details\n\n`;
+              }
+            } else {
+              comment += '_No test results available_\n\n';
+            }
+
+            // AI QA results
+            comment += '### 🤖 AI QA Analysis\n\n';
+
+            const aiReportPath = 'ai-qa-report/qa-report.md';
+            if (fs.existsSync(aiReportPath)) {
+              let aiReport = fs.readFileSync(aiReportPath, 'utf8');
+              // Remove the main header
+              aiReport = aiReport.replace(/^# QA Report\n+/, '');
+              // Demote all headers by one level
+              aiReport = aiReport.replace(/^## /gm, '#### ');
+              aiReport = aiReport.replace(/^### /gm, '##### ');
+              comment += aiReport + '\n\n';
+            } else {
+              comment += '_AI QA analysis not available_\n\n';
+            }
+
+            // Artifacts links
+            comment += '---\n\n';
+            comment += '**📊 Reports:**\n';
+            comment += `- [Download Playwright Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) → run \`npx playwright show-report\`\n`;
+            comment += `- [Download AI QA Screenshots](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+
+            // Find or update existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('🎭 Test Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+      - name: Fail if tests failed
+        if: needs.playwright.outputs.failed != '0' && needs.playwright.outputs.failed != ''
+        run: |
+          echo "❌ ${{ needs.playwright.outputs.failed }} test(s) failed"
+          exit 1
