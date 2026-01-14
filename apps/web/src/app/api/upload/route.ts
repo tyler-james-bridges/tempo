@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 
+// Maximum file size: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 // Admin client for storage operations (bypasses RLS)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,13 +39,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size is 10MB." },
+        { status: 400 }
+      );
+    }
+
     // Generate unique filename
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const filePath = `${user.id}/${timestamp}_${safeName}`;
 
     // Upload to Supabase Storage using admin client (bypasses RLS)
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from("pdfs")
       .upload(filePath, file, {
         contentType: "application/pdf",

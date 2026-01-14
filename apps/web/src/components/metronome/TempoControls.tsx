@@ -7,7 +7,6 @@ interface TempoControlsProps {
   toggle: () => void;
   countInEnabled: boolean;
   setCountInEnabled: (enabled: boolean) => void;
-  onOpenSettings: () => void;
   tapTempo: () => void;
 }
 
@@ -18,7 +17,6 @@ export function TempoControls({
   toggle,
   countInEnabled,
   setCountInEnabled,
-  onOpenSettings,
   tapTempo,
 }: TempoControlsProps) {
   return (
