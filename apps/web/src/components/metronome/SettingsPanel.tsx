@@ -25,6 +25,7 @@ interface SettingsPanelProps {
   setCountInEnabled: (enabled: boolean) => void;
   cloudSync?: CloudSyncHook;
   showManager?: ShowHook;
+  isAuthenticated?: boolean;
 }
 
 const TABS = ["Shows", "Tempo", "Sound", "Rhythm"] as const;
@@ -75,6 +76,7 @@ export function SettingsPanel({
   setCountInEnabled,
   cloudSync,
   showManager,
+  isAuthenticated,
 }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("Shows");
 
@@ -124,6 +126,7 @@ export function SettingsPanel({
               cloudSync={cloudSync}
               showManager={showManager}
               onShowImported={onClose}
+              isAuthenticated={isAuthenticated}
             />
           )}
 
