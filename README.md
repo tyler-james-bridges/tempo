@@ -183,3 +183,4 @@ The mobile app connects to Supabase for cloud features:
 ## License
 
 MIT
+
