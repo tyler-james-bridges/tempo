@@ -263,6 +263,7 @@ export default function MetronomePage() {
         setCountInEnabled={setCountInEnabled}
         cloudSync={cloudSync}
         showManager={showManager}
+        isAuthenticated={!!user}
       />
     </div>
   );

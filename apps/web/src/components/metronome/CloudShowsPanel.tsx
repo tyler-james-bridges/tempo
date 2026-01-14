@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import type { CloudSyncHook } from "@/hooks/useCloudSync";
 import type { ShowHook } from "@/hooks/useShow";
 
@@ -15,12 +16,14 @@ interface CloudShowsPanelProps {
   cloudSync: CloudSyncHook;
   showManager: ShowHook;
   onShowImported?: () => void;
+  isAuthenticated?: boolean;
 }
 
 export function CloudShowsPanel({
   cloudSync,
   showManager,
   onShowImported,
+  isAuthenticated,
 }: CloudShowsPanelProps) {
   const [importingShowId, setImportingShowId] = useState<string | null>(null);
   const [confirmReplace, setConfirmReplace] = useState<{
@@ -30,6 +33,7 @@ export function CloudShowsPanel({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [guestMode, setGuestMode] = useState(false);
 
   const handleImportShow = async (showId: string, showName: string) => {
     // If there's an existing show, confirm replacement
@@ -130,8 +134,65 @@ export function CloudShowsPanel({
     }
   };
 
+  // Show login prompt for unauthenticated users (unless in guest mode)
+  if (!isAuthenticated && !guestMode) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center py-6">
+          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-6 h-6 text-white/40"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-white/80 font-medium mb-1">Sign in to save shows</h3>
+          <p className="text-white/40 text-sm mb-6">
+            Your uploaded sheet music will be saved to your account
+          </p>
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/login"
+              className="w-full py-3 px-4 bg-[#E8913A] hover:bg-[#E8913A]/90 text-white text-sm font-medium rounded-xl transition-colors text-center"
+            >
+              Sign in
+            </Link>
+            <button
+              onClick={() => setGuestMode(true)}
+              className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 text-white/60 text-sm font-medium rounded-xl transition-colors"
+            >
+              Continue as guest
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Guest mode warning */}
+      {!isAuthenticated && guestMode && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+          <p className="text-amber-400 text-sm font-medium">Guest mode</p>
+          <p className="text-amber-400/70 text-xs mt-1">
+            Uploads won&apos;t be saved.{" "}
+            <Link href="/login" className="underline hover:text-amber-400">
+              Sign in
+            </Link>{" "}
+            to save your shows.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -139,13 +200,15 @@ export function CloudShowsPanel({
             Your Shows
           </h3>
         </div>
-        <button
-          onClick={() => cloudSync.fetchShows()}
-          disabled={cloudSync.loading}
-          className="text-xs text-[#E8913A] hover:text-[#E8913A]/80 disabled:opacity-50 transition-colors"
-        >
-          {cloudSync.loading ? "Syncing..." : "Refresh"}
-        </button>
+        {isAuthenticated && (
+          <button
+            onClick={() => cloudSync.fetchShows()}
+            disabled={cloudSync.loading}
+            className="text-xs text-[#E8913A] hover:text-[#E8913A]/80 disabled:opacity-50 transition-colors"
+          >
+            {cloudSync.loading ? "Syncing..." : "Refresh"}
+          </button>
+        )}
       </div>
 
       {/* Error */}
@@ -235,16 +298,16 @@ export function CloudShowsPanel({
         </div>
       )}
 
-      {/* Shows List */}
-      {cloudSync.loading && cloudSync.readyShows.length === 0 ? (
+      {/* Shows List - only for authenticated users */}
+      {isAuthenticated && cloudSync.loading && cloudSync.readyShows.length === 0 ? (
         <div className="flex items-center justify-center py-8">
           <div className="w-6 h-6 border-2 border-[#E8913A] border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : cloudSync.readyShows.length === 0 ? (
+      ) : isAuthenticated && cloudSync.readyShows.length === 0 ? (
         <div className="text-center py-4">
           <p className="text-white/30 text-xs">No shows yet</p>
         </div>
-      ) : (
+      ) : isAuthenticated ? (
         <div className="space-y-2 max-h-[300px] overflow-y-auto">
           {cloudSync.readyShows.map((show) => {
             const isCurrentShow = showManager.show.cloudShowId === show.id;
@@ -291,10 +354,10 @@ export function CloudShowsPanel({
             );
           })}
         </div>
-      )}
+      ) : null}
 
-      {/* Last synced */}
-      {cloudSync.lastSynced && (
+      {/* Last synced - only for authenticated users */}
+      {isAuthenticated && cloudSync.lastSynced && (
         <p className="text-xs text-white/30 text-center">
           Last synced: {cloudSync.lastSynced.toLocaleTimeString()}
         </p>
