@@ -234,7 +234,6 @@ export default function MetronomePage() {
           toggle={toggle}
           countInEnabled={countInEnabled}
           setCountInEnabled={setCountInEnabled}
-          onOpenSettings={() => setShowSettings(true)}
           tapTempo={tapTempo}
         />
 
