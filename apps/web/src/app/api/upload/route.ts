@@ -96,13 +96,18 @@ export async function POST(request: NextRequest) {
 
     // Trigger processing after response is sent (keeps function alive)
     const processUrl = new URL("/api/process", request.url);
+    const internalSecret = process.env.INTERNAL_API_SECRET;
     after(async () => {
+      if (!internalSecret) {
+        console.error("INTERNAL_API_SECRET not configured - skipping background processing");
+        return;
+      }
       try {
         const response = await fetch(processUrl.toString(), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-internal-secret": process.env.INTERNAL_API_SECRET || "",
+            "x-internal-secret": internalSecret,
           },
           body: JSON.stringify({ showId: show.id, pdfUrl: publicUrl }),
         });
