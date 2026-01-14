@@ -50,11 +50,11 @@ jobs:
         run: node src/index.js
         working-directory: ai-qa-engineer
         env:
-          INPUT_URL: ${{ steps.vercel.outputs.url }}
-          INPUT_VIEWPORTS: desktop,mobile
-          INPUT_FOCUS: all
-          INPUT_OUTPUT_FORMAT: markdown
-          INPUT_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          URL: ${{ steps.vercel.outputs.url }}
+          VIEWPORTS: desktop,mobile
+          FOCUS: all
+          OUTPUT_FORMAT: markdown
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Upload QA Screenshots
         uses: actions/upload-artifact@v4
