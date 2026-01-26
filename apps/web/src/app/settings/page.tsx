@@ -1,36 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
-import type { User } from "@supabase/supabase-js";
+import { useUser, useClerk } from "@clerk/nextjs";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-      setUser(user);
-      setLoading(false);
-    });
-  }, [router]);
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut();
     router.push("/");
   };
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9]">
         <div className="text-[#5C5C5C]">Loading...</div>
@@ -39,8 +23,17 @@ export default function SettingsPage() {
   }
 
   if (!user) {
+    router.push("/login");
     return null;
   }
+
+  // Get user metadata
+  const email = user.primaryEmailAddress?.emailAddress;
+  const userId = user.id;
+  const createdAt = user.createdAt;
+  const lastSignInAt = user.lastSignInAt;
+  const emailVerified = user.primaryEmailAddress?.verification?.status === "verified";
+  const provider = user.externalAccounts?.[0]?.provider || "email";
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAF9]">
@@ -78,18 +71,18 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#5C5C5C] mb-1">Email</label>
-              <p className="text-[#1A1A1A]">{user.email}</p>
+              <p className="text-[#1A1A1A]">{email}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[#5C5C5C] mb-1">User ID</label>
-              <p className="text-[#1A1A1A] font-mono text-sm">{user.id}</p>
+              <p className="text-[#1A1A1A] font-mono text-sm">{userId}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[#5C5C5C] mb-1">Account Created</label>
               <p className="text-[#1A1A1A]">
-                {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
+                {createdAt ? new Date(createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
@@ -100,7 +93,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-medium text-[#5C5C5C] mb-1">Last Sign In</label>
               <p className="text-[#1A1A1A]">
-                {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString('en-US', {
+                {lastSignInAt ? new Date(lastSignInAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -113,7 +106,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-medium text-[#5C5C5C] mb-1">Email Verified</label>
               <p className="text-[#1A1A1A]">
-                {user.email_confirmed_at ? (
+                {emailVerified ? (
                   <span className="inline-flex items-center gap-1.5 text-[#16A34A]">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -135,7 +128,7 @@ export default function SettingsPage() {
           <div>
             <label className="block text-sm font-medium text-[#5C5C5C] mb-1">Sign-in Method</label>
             <p className="text-[#1A1A1A] capitalize">
-              {user.app_metadata?.provider || 'Email'}
+              {provider}
             </p>
           </div>
         </div>

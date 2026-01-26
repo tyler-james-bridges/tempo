@@ -1,46 +1,26 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
+import { useUser, useClerk } from "@clerk/nextjs";
+import { useQuery, useMutation, useAction } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
 import { getStatusBadgeClass } from "@/lib/utils";
-import type { User } from "@supabase/supabase-js";
-import type { CloudShow } from "@tempo/shared";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [shows, setShows] = useState<CloudShow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
+
+  // Convex queries, mutations, and actions
+  const shows = useQuery(api.shows.listUserShows);
+  const generateUploadUrl = useMutation(api.shows.generateUploadUrl);
+  const createShowFromPdf = useMutation(api.shows.createShowFromPdf);
+  const processPdf = useAction(api.processing.processPdf);
+
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-      setUser(user);
-      loadShows();
-    });
-  }, [router]);
-
-  const loadShows = async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("shows")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setShows(data as CloudShow[]);
-    }
-    setLoading(false);
-  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -82,21 +62,35 @@ export default function DashboardPage() {
     setUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      // Step 1: Get upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
 
-      const response = await fetch("/api/upload", {
+      // Step 2: Upload file directly to Convex storage
+      const response = await fetch(uploadUrl, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": file.type },
+        body: file,
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || "Upload failed");
+        throw new Error("Failed to upload file");
       }
 
-      setShows((prev) => [result.show, ...prev]);
+      const { storageId } = await response.json();
+
+      // Step 3: Create show record
+      const showId = await createShowFromPdf({
+        name: file.name.replace(".pdf", ""),
+        sourceFilename: file.name,
+        pdfStorageId: storageId,
+      });
+
+      // Step 4: Trigger PDF processing action (runs async on server)
+      processPdf({ showId }).catch((err) => {
+        console.error("PDF processing failed:", err);
+      });
+
+      // Shows list will auto-update via Convex reactivity
     } catch (error) {
       alert(
         "Failed to upload: " +
@@ -108,12 +102,11 @@ export default function DashboardPage() {
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut();
     router.push("/");
   };
 
-  if (loading) {
+  if (!isLoaded || shows === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9]">
         <div className="text-[#5C5C5C]">Loading...</div>
@@ -142,7 +135,9 @@ export default function DashboardPage() {
             >
               Open Metronome
             </Link>
-            <span className="text-[#5C5C5C] text-sm hidden sm:block">{user?.email}</span>
+            <span className="text-[#5C5C5C] text-sm hidden sm:block">
+              {user?.primaryEmailAddress?.emailAddress}
+            </span>
             <Link
               href="/settings"
               className="text-[#5C5C5C] hover:text-[#1A1A1A] text-sm transition-colors"
@@ -220,9 +215,9 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {shows.map((show) => (
               <div
-                key={show.id}
+                key={show._id}
                 className="card card-interactive p-4 flex items-center justify-between"
-                onClick={() => router.push(`/shows/${show.id}`)}
+                onClick={() => router.push(`/shows/${show._id}`)}
               >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-[#F5F4F2] flex items-center justify-center">

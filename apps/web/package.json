@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@clerk/nextjs": "^6.36.10",
     "@ducanh2912/next-pwa": "^10.2.9",
-    "@supabase/ssr": "^0.6.0",
-    "@supabase/supabase-js": "^2.49.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@tempo/shared": "*",
+    "convex": "^1.31.6",
     "next": "15.3.8",
     "pdf-lib": "^1.17.1",
     "react": "19.1.0",

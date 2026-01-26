@@ -1,21 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
-import type { User } from "@supabase/supabase-js";
+import { useUser } from "@clerk/nextjs";
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
-  }, []);
+  const { user, isLoaded } = useUser();
+  const loading = !isLoaded;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAF9]">

@@ -1,182 +1,124 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
+import dynamic from "next/dynamic";
+import { useUser } from "@clerk/nextjs";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../../../convex/_generated/api";
+import type { Id } from "../../../../../../convex/_generated/dataModel";
 import { getStatusBadgeClass } from "@/lib/utils";
-import { PdfViewer } from "@/components/PdfViewer";
 
-interface Show {
-  id: string;
-  name: string;
-  source_type: string;
-  source_filename: string | null;
-  pdf_url: string | null;
-  status: string;
-  error_message: string | null;
-  created_at: string;
-}
-
-interface Part {
-  id: string;
-  name: string;
-  tempo: number;
-  beats: number;
-  measure_start: number | null;
-  measure_end: number | null;
-  rehearsal_mark: string | null;
-  position: number;
-}
+// Dynamic import to avoid SSR issues with pdfjs-dist
+const PdfViewer = dynamic(() => import("@/components/PdfViewer").then(mod => mod.PdfViewer), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center p-8">
+      <div className="w-6 h-6 border-2 border-[#E8913A] border-t-transparent rounded-full animate-spin" />
+    </div>
+  ),
+});
 
 export default function ShowDetailPage() {
   const router = useRouter();
   const params = useParams();
   const showId = params.id as string;
 
-  const [show, setShow] = useState<Show | null>(null);
-  const [parts, setParts] = useState<Part[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isLoaded } = useUser();
+
+  // Convex queries and mutations
+  const showWithParts = useQuery(
+    api.shows.getShowWithParts,
+    showId ? { showId: showId as Id<"shows"> } : "skip"
+  );
+  const createPartMutation = useMutation(api.parts.createPart);
+  const deletePartMutation = useMutation(api.parts.deletePart);
+  const updateShowStatusMutation = useMutation(api.shows.updateShowStatus);
+
   const [addingPart, setAddingPart] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
-
   const [newPartName, setNewPartName] = useState("");
   const [newPartTempo, setNewPartTempo] = useState(120);
   const [newPartBeats, setNewPartBeats] = useState(4);
   const [showPdf, setShowPdf] = useState(false);
 
-  useEffect(() => {
-    loadShow();
+  // Loading state - wait for auth and data
+  const loading = !isLoaded || showWithParts === undefined;
 
-    // Subscribe to realtime updates for this show
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`show-${showId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "shows",
-          filter: `id=eq.${showId}`,
-        },
-        (payload) => {
-          const updatedShow = payload.new as Show;
-          setShow(updatedShow);
+  // Redirect if no show found (after loading)
+  if (!loading && showWithParts === null) {
+    router.push("/dashboard");
+    return null;
+  }
 
-          // If processing just completed, reload parts
-          if (updatedShow.status === "ready" || updatedShow.status === "error") {
-            loadShow();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [showId]);
-
-  const loadShow = async () => {
-    const supabase = createClient();
-
-    const { data: showData, error: showError } = await supabase
-      .from("shows")
-      .select("*")
-      .eq("id", showId)
-      .single();
-
-    if (showError || !showData) {
-      router.push("/dashboard");
-      return;
-    }
-
-    setShow(showData);
-
-    const { data: partsData } = await supabase
-      .from("parts")
-      .select("*")
-      .eq("show_id", showId)
-      .order("position");
-
-    setParts(partsData || []);
-    setLoading(false);
-  };
+  const show = showWithParts?.show;
+  const parts = showWithParts?.parts ?? [];
 
   const addPart = async () => {
-    if (!newPartName.trim()) return;
+    if (!newPartName.trim() || !show) return;
 
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("parts")
-      .insert({
-        show_id: showId,
+    try {
+      await createPartMutation({
+        showId: show._id,
         name: newPartName,
         tempo: newPartTempo,
         beats: newPartBeats,
-        position: parts.length,
-      })
-      .select()
-      .single();
+      });
 
-    if (!error && data) {
-      setParts([...parts, data]);
       setNewPartName("");
       setNewPartTempo(120);
       setNewPartBeats(4);
       setAddingPart(false);
+    } catch (error) {
+      console.error("Failed to add part:", error);
     }
   };
 
   const deletePart = async (partId: string) => {
-    const supabase = createClient();
-    await supabase.from("parts").delete().eq("id", partId);
-    setParts(parts.filter((p) => p.id !== partId));
+    try {
+      await deletePartMutation({
+        partId: partId as Id<"parts">,
+      });
+    } catch (error) {
+      console.error("Failed to delete part:", error);
+    }
   };
 
   const reprocessShow = async () => {
     if (!show) return;
 
     setReprocessing(true);
-    const supabase = createClient();
 
     try {
-      await supabase.from("parts").delete().eq("show_id", showId);
-      setParts([]);
-
-      await supabase
-        .from("shows")
-        .update({ status: "processing", error_message: null })
-        .eq("id", showId);
-
-      setShow({ ...show, status: "processing", error_message: null });
-
-      const { data: showData } = await supabase
-        .from("shows")
-        .select("pdf_url")
-        .eq("id", showId)
-        .single();
-
-      if (!showData?.pdf_url) {
-        throw new Error("No PDF URL found for this show");
+      // Delete all parts for this show
+      for (const part of parts) {
+        await deletePartMutation({
+          partId: part._id,
+        });
       }
 
+      // Update show status to processing
+      await updateShowStatusMutation({
+        showId: show._id,
+        status: "processing",
+      });
+
+      // Note: PDF reprocessing would need to be triggered via an API route
+      // that can access the Convex storage URL and call the AI processing
       const response = await fetch("/api/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ showId, pdfUrl: showData.pdf_url }),
+        body: JSON.stringify({ showId: show._id }),
       });
 
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.details || "Processing failed");
       }
-
-      await loadShow();
     } catch (error) {
       console.error("Reprocess error:", error);
       alert("Failed to reprocess: " + (error instanceof Error ? error.message : "Unknown error"));
-      await loadShow();
     } finally {
       setReprocessing(false);
     }
@@ -228,8 +170,8 @@ export default function ShowDetailPage() {
               <h1 className="text-2xl font-bold text-[#1A1A1A]">{show.name}</h1>
               <span className={getStatusBadgeClass(show.status)}>{show.status}</span>
             </div>
-            {show.source_filename && (
-              <p className="text-[#5C5C5C] text-sm">{show.source_filename}</p>
+            {show.sourceFilename && (
+              <p className="text-[#5C5C5C] text-sm">{show.sourceFilename}</p>
             )}
           </div>
           {show.status !== "processing" && (
@@ -256,9 +198,9 @@ export default function ShowDetailPage() {
         </div>
 
         {/* Error Message */}
-        {show.status === "error" && show.error_message && (
+        {show.status === "error" && show.errorMessage && (
           <div className="card p-4 mb-6 border-[#DC2626]/20 bg-[#DC2626]/5">
-            <p className="text-[#DC2626] text-sm">{show.error_message}</p>
+            <p className="text-[#DC2626] text-sm">{show.errorMessage}</p>
           </div>
         )}
 
@@ -276,7 +218,7 @@ export default function ShowDetailPage() {
         )}
 
         {/* PDF Viewer Section */}
-        {show.pdf_url && (
+        {show.pdfStorageId && (
           <div className="card mb-6 overflow-hidden">
             <button
               onClick={() => setShowPdf(!showPdf)}
@@ -286,7 +228,7 @@ export default function ShowDetailPage() {
                 <svg className="w-5 h-5 text-[#5C5C5C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="font-medium text-[#1A1A1A]">{show.source_filename || "Sheet Music PDF"}</span>
+                <span className="font-medium text-[#1A1A1A]">{show.sourceFilename || "Sheet Music PDF"}</span>
               </div>
               <svg
                 className={`w-5 h-5 text-[#5C5C5C] transition-transform ${showPdf ? "rotate-180" : ""}`}
@@ -383,13 +325,13 @@ export default function ShowDetailPage() {
           ) : (
             <div className="space-y-2">
               {parts.map((part, index) => (
-                <div key={part.id} className="part-card flex items-center justify-between">
+                <div key={part._id} className="part-card flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <span className="text-[#8C8C8C] text-sm w-6">{index + 1}</span>
                     <div>
                       <h3 className="font-medium text-[#1A1A1A]">{part.name}</h3>
-                      {part.rehearsal_mark && (
-                        <span className="text-[#E8913A] text-sm">Rehearsal {part.rehearsal_mark}</span>
+                      {part.rehearsalMark && (
+                        <span className="text-[#E8913A] text-sm">Rehearsal {part.rehearsalMark}</span>
                       )}
                     </div>
                   </div>
@@ -402,14 +344,14 @@ export default function ShowDetailPage() {
                       <p className="text-lg font-medium text-[#1A1A1A]">{part.beats}/4</p>
                       <p className="text-[#8C8C8C] text-xs">Time</p>
                     </div>
-                    {part.measure_start && part.measure_end && (
+                    {part.measureStart && part.measureEnd && (
                       <div className="text-center">
-                        <p className="text-lg font-medium text-[#1A1A1A]">{part.measure_start}-{part.measure_end}</p>
+                        <p className="text-lg font-medium text-[#1A1A1A]">{part.measureStart}-{part.measureEnd}</p>
                         <p className="text-[#8C8C8C] text-xs">Measures</p>
                       </div>
                     )}
                     <button
-                      onClick={() => deletePart(part.id)}
+                      onClick={() => deletePart(part._id)}
                       className="text-[#8C8C8C] hover:text-[#DC2626] transition-colors p-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

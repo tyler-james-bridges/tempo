@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "TempoMap - Upload Sheet Music, Get Tempo Maps",
@@ -61,8 +62,10 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen bg-[#FAFAF9] text-[#1A1A1A]">
-        {children}
-        <InstallPrompt />
+        <Providers>
+          {children}
+          <InstallPrompt />
+        </Providers>
       </body>
     </html>
   );
