@@ -20,7 +20,6 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@tempo/shared": "*",
     "convex": "^1.31.6",
-    "svix": "^1.84.1",
     "next": "15.3.8",
     "pdf-lib": "^1.17.1",
     "react": "19.1.4",
@@ -30,6 +29,7 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/node": "^22",
+    "svix": "^1.84.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.23",
