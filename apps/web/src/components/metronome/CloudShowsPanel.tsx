@@ -54,7 +54,7 @@ export function CloudShowsPanel({
   const [deletingShow, setDeletingShow] = useState<{
     id: string;
     name: string;
-    source_filename?: string;
+    source_filename?: string | null;
     created_at: string;
   } | null>(null);
 
