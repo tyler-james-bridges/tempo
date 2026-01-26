@@ -7,9 +7,9 @@ A professional metronome ecosystem for marching arts, featuring a React Native m
 TempoMap consists of two main applications:
 
 1. **Mobile App** (`apps/mobile`) - A high-precision metronome built with React Native and Expo
-2. **Web Portal** (`apps/web`) - A Next.js web app for uploading sheet music PDFs and extracting tempo maps using AI
+2. **Web Portal** (`apps/web`) - A Next.js PWA for uploading sheet music PDFs and extracting tempo maps using AI
 
-The apps sync via Supabase, allowing musicians to upload sheet music on the web and have tempo maps instantly available on their mobile device.
+The apps sync via Convex, allowing musicians to upload sheet music on the web and have tempo maps instantly available on their mobile device.
 
 ## Features
 
@@ -31,11 +31,12 @@ The apps sync via Supabase, allowing musicians to upload sheet music on the web 
 
 ### Web Portal
 
-- **PDF Upload** - Drag & drop sheet music PDFs (up to 50MB)
+- **PWA Support** - Install as a native-like app on mobile and desktop
+- **PDF Upload** - Drag & drop sheet music PDFs with processing status
 - **AI Analysis** - Claude AI extracts tempo markings, time signatures, and rehearsal marks from PDFs
-- **Show Management** - Dashboard to view and manage uploaded shows
-- **User Authentication** - Sign up/login with Supabase Auth
-- **Realtime Sync** - Processed tempo maps sync instantly to the mobile app
+- **Show Management** - Dashboard to view, manage, and delete uploaded shows
+- **User Authentication** - Sign up/login with Clerk
+- **Realtime Sync** - Processed tempo maps sync instantly to the mobile app via Convex
 
 ## Tech Stack
 
@@ -45,7 +46,7 @@ The apps sync via Supabase, allowing musicians to upload sheet music on the web 
 - [React Native](https://reactnative.dev) 0.81
 - [react-native-audio-api](https://github.com/software-mansion/react-native-audio-api) - Web Audio API for React Native
 - [react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/) - Native-thread gesture handling
-- [@supabase/supabase-js](https://supabase.com/docs/reference/javascript) - Database and realtime subscriptions
+- [Convex](https://convex.dev) - Realtime database and subscriptions
 - [AsyncStorage](https://react-native-async-storage.github.io/async-storage/) - Local persistence
 
 ### Web Portal
@@ -53,7 +54,8 @@ The apps sync via Supabase, allowing musicians to upload sheet music on the web 
 - [Next.js](https://nextjs.org) 15 with App Router
 - [React](https://react.dev) 19
 - [Tailwind CSS](https://tailwindcss.com) 3
-- [Supabase](https://supabase.com) - Auth, database, storage
+- [Convex](https://convex.dev) - Realtime database, file storage, and serverless functions
+- [Clerk](https://clerk.com) - User authentication
 - [Anthropic Claude API](https://docs.anthropic.com) - AI-powered PDF analysis
 
 ### Monorepo
@@ -71,16 +73,25 @@ tempo/
 │   │   │   ├── components/     # UI components
 │   │   │   ├── hooks/          # Custom hooks (useMetronome, useCloudSync, etc.)
 │   │   │   ├── screens/        # Screen components
-│   │   │   ├── constants/      # Theme and app constants
-│   │   │   └── lib/            # Supabase client
+│   │   │   └── constants/      # Theme and app constants
 │   │   └── App.tsx             # App entry point
-│   └── web/                    # Next.js web portal
+│   └── web/                    # Next.js web portal (PWA)
 │       └── src/
-│           ├── app/            # App Router pages and API routes
-│           │   ├── api/        # API routes (upload, process)
+│           ├── app/            # App Router pages
 │           │   ├── dashboard/  # User dashboard
-│           │   └── shows/      # Show detail pages
-│           └── lib/            # Supabase client
+│           │   ├── shows/      # Show detail pages
+│           │   ├── login/      # Clerk login page
+│           │   ├── signup/     # Clerk signup page
+│           │   └── metronome/  # PWA metronome
+│           ├── components/     # React components
+│           └── hooks/          # Custom hooks (useCloudSync, etc.)
+├── convex/                     # Convex backend
+│   ├── schema.ts               # Database schema (users, shows, parts)
+│   ├── shows.ts                # Show mutations and queries
+│   ├── parts.ts                # Part mutations and queries
+│   ├── users.ts                # User management
+│   ├── processing.ts           # PDF processing action (Claude AI)
+│   └── http.ts                 # HTTP routes (Clerk webhooks)
 ├── packages/
 │   └── shared/                 # Shared TypeScript types
 │       └── src/index.ts        # Type definitions for Part, Show, CloudShow, etc.
@@ -92,20 +103,34 @@ tempo/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - npm 10+
 - Expo CLI (`npm install -g expo-cli`)
 - iOS Simulator (macOS) or Android Emulator
+- [Convex account](https://convex.dev)
+- [Clerk account](https://clerk.com)
 
 ### Environment Variables
 
-Create `.env.local` files in `apps/web/` with:
+Create `.env.local` in `apps/web/` with:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
+# Convex
+NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
+
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+
+# AI Processing
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Set Convex environment variables:
+
+```bash
+npx convex env set ANTHROPIC_API_KEY "sk-ant-..."
+npx convex env set CLERK_WEBHOOK_SECRET "whsec_..."
 ```
 
 ### Installation
@@ -113,6 +138,9 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 ```bash
 # Install all dependencies
 npm install
+
+# Start Convex development server (required for backend)
+npx convex dev
 
 # Start the mobile app development server
 npm run dev:mobile
@@ -149,6 +177,7 @@ cd apps/web
 npm run dev                 # Start development server
 npm run build               # Production build
 npm run lint                # Run ESLint
+npm run test                # Run Playwright tests
 ```
 
 ## Audio Architecture
@@ -173,14 +202,41 @@ Sounds are synthesized programmatically as triangle waves with exponential decay
 
 ## Cloud Sync
 
-The mobile app connects to Supabase for cloud features:
+The app uses Convex for real-time cloud features:
 
-1. **Authentication** - Users sign in to access their shows
-2. **Show Sync** - Fetches shows and parts from the `shows` and `parts` tables
-3. **Realtime Updates** - Subscribes to Postgres changes for live updates when new shows are processed
-4. **Two-way Sync** - Parts can be created, updated, and reordered from the mobile app
+1. **Authentication** - Users sign in via Clerk, which syncs to Convex via webhooks
+2. **Show Sync** - Fetches shows and parts from Convex with automatic realtime updates
+3. **PDF Processing** - PDFs are uploaded to Convex file storage and processed by a Convex action using Claude AI
+4. **Realtime Updates** - All connected clients receive instant updates when data changes
+5. **Two-way Sync** - Parts can be created, updated, and reordered from both web and mobile
+
+### Convex Schema
+
+```typescript
+// Shows table
+shows: {
+  user_id: v.string(),           // Clerk user ID
+  name: v.string(),
+  source_filename: v.optional(v.string()),
+  pdf_storage_id: v.optional(v.id("_storage")),
+  status: v.string(),            // "processing" | "ready" | "error"
+}
+
+// Parts table
+parts: {
+  show_id: v.id("shows"),
+  name: v.string(),
+  tempo: v.number(),
+  time_signature_numerator: v.number(),
+  time_signature_denominator: v.number(),
+  order_index: v.number(),
+}
+```
+
+## Deployment
+
+See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed deployment instructions.
 
 ## License
 
 MIT
-
