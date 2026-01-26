@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Use CDN worker to avoid bundle bloat
+// Use CDN worker to avoid bundle issues
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
@@ -13,45 +16,17 @@ interface PdfViewerProps {
 }
 
 export function PdfViewer({ showId }: PdfViewerProps) {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchSignedUrl() {
-      try {
-        const response = await fetch(`/api/pdf-url/${showId}`);
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to load PDF");
-        }
-        const { url } = await response.json();
-        setPdfUrl(url);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load PDF");
-      } finally {
-        setLoading(false);
-      }
-    }
+  // Get PDF URL from Convex
+  const pdfUrl = useQuery(api.shows.getPdfUrl, { showId: showId as Id<"shows"> });
 
-    fetchSignedUrl();
-  }, [showId]);
-
-  if (loading) {
+  if (pdfUrl === undefined) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="w-6 h-6 border-2 border-[#E8913A] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center p-8 text-[#8C8C8C]">
-        <p>{error}</p>
       </div>
     );
   }

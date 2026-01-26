@@ -87,9 +87,9 @@ export default function PrivacyPolicy() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-[#1A1A1A] mb-3">Data Storage & Security</h2>
             <p className="text-[#5C5C5C] leading-relaxed">
-              Your data is stored securely using Supabase, which provides enterprise-grade security
-              including encryption at rest and in transit. We do not sell, rent, or share your
-              personal information with third parties for marketing purposes.
+              Your data is stored securely using Convex, which provides enterprise-grade security
+              including encryption at rest and in transit. Authentication is handled by Clerk.
+              We do not sell, rent, or share your personal information with third parties for marketing purposes.
             </p>
           </section>
 
@@ -99,7 +99,8 @@ export default function PrivacyPolicy() {
               We use the following third-party services:
             </p>
             <ul className="list-disc pl-6 text-[#5C5C5C] space-y-1">
-              <li><strong>Supabase</strong> - Authentication and database hosting (<a href="https://supabase.com/privacy" className="text-[#E8913A] hover:underline">Privacy Policy</a>)</li>
+              <li><strong>Clerk</strong> - Authentication (<a href="https://clerk.com/privacy" className="text-[#E8913A] hover:underline">Privacy Policy</a>)</li>
+              <li><strong>Convex</strong> - Database and file storage (<a href="https://www.convex.dev/privacy" className="text-[#E8913A] hover:underline">Privacy Policy</a>)</li>
             </ul>
           </section>
 

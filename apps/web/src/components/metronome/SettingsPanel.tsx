@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { SoundType, SubdivisionType, AccentPattern } from "@/hooks/useMetronome";
 import type { CloudSyncHook } from "@/hooks/useCloudSync";
 import type { ShowHook } from "@/hooks/useShow";
@@ -9,6 +9,7 @@ import { CloudShowsPanel } from "./CloudShowsPanel";
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: "Shows" | "Tempo" | "Sound" | "Rhythm";
   tempo: number;
   setTempo: (tempo: number) => void;
   beats: number;
@@ -60,6 +61,7 @@ const ACCENT_PATTERNS: { value: AccentPattern; label: string }[] = [
 export function SettingsPanel({
   isOpen,
   onClose,
+  initialTab,
   tempo,
   setTempo,
   beats,
@@ -78,7 +80,14 @@ export function SettingsPanel({
   showManager,
   isAuthenticated,
 }: SettingsPanelProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("Shows");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "Shows");
+
+  // Update active tab when initialTab changes and panel opens
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   if (!isOpen) return null;
 

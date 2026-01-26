@@ -17,10 +17,10 @@ const withPWA = withPWAInit({
     clientsClaim: true,
     runtimeCaching: [
       {
-        urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/i,
+        urlPattern: /^https:\/\/.*\.convex\.cloud\/.*$/i,
         handler: "NetworkFirst",
         options: {
-          cacheName: "supabase-api",
+          cacheName: "convex-api",
           expiration: {
             maxEntries: 32,
             maxAgeSeconds: 60 * 60, // 1 hour
@@ -111,7 +111,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+              "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud; font-src 'self'; worker-src 'self' blob: https://unpkg.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

@@ -149,7 +149,7 @@ export default function Support() {
               <div className="card p-5">
                 <h3 className="font-medium text-[#1A1A1A] mb-2">Is my data secure?</h3>
                 <p className="text-[#5C5C5C] text-sm leading-relaxed">
-                  Yes. We use Supabase for authentication and data storage, which provides
+                  Yes. We use Clerk for authentication and Convex for data storage, both providing
                   enterprise-grade security with encryption at rest and in transit. See our{" "}
                   <Link href="/privacy" className="text-[#E8913A] hover:underline">Privacy Policy</Link> for details.
                 </p>

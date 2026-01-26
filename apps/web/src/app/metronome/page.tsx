@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
+import { useUser } from "@clerk/nextjs";
 import { useMetronome } from "@/hooks/useMetronome";
 import { useShow, type Part } from "@/hooks/useShow";
 import { useCloudSync } from "@/hooks/useCloudSync";
@@ -10,7 +10,6 @@ import { BeatRing } from "@/components/metronome/BeatRing";
 import { TempoControls } from "@/components/metronome/TempoControls";
 import { SettingsPanel } from "@/components/metronome/SettingsPanel";
 import { ScoreBar } from "@/components/metronome/ScoreBar";
-import type { User } from "@supabase/supabase-js";
 
 const SUBDIVISIONS = [
   { value: 1, name: "Quarter" },
@@ -20,13 +19,18 @@ const SUBDIVISIONS = [
 ] as const;
 
 export default function MetronomePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoaded } = useUser();
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"Shows" | "Tempo" | "Sound" | "Rhythm">("Shows");
+
+  const openSettings = (tab: "Shows" | "Tempo" | "Sound" | "Rhythm" = "Shows") => {
+    setSettingsTab(tab);
+    setShowSettings(true);
+  };
 
   const metronome = useMetronome();
   const showManager = useShow();
-  const cloudSync = useCloudSync(user?.id ?? null);
+  const cloudSync = useCloudSync();
   const {
     tempo,
     beats,
@@ -50,13 +54,7 @@ export default function MetronomePage() {
     tapTempo,
   } = metronome;
 
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
-  }, []);
+  const loading = !isLoaded;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -152,7 +150,7 @@ export default function MetronomePage() {
         </div>
 
         <button
-          onClick={() => setShowSettings(true)}
+          onClick={() => openSettings("Shows")}
           className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Open settings"
         >
@@ -169,7 +167,7 @@ export default function MetronomePage() {
           parts={showManager.show.parts}
           activePartId={showManager.show.activePartId}
           onSelectPart={handleSelectPart}
-          onOpenSettings={() => setShowSettings(true)}
+          onOpenSettings={() => openSettings("Shows")}
           onClearShow={showManager.clearShow}
         />
       )}
@@ -218,7 +216,7 @@ export default function MetronomePage() {
           </button>
 
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={() => openSettings("Sound")}
             className="px-6 py-3 bg-[#1A1A1A] border border-white/10 rounded-xl flex flex-col items-center min-w-[85px] hover:bg-[#222] transition-colors"
           >
             <span className="text-base font-semibold text-white/80">{soundType.toUpperCase()}</span>
@@ -247,6 +245,7 @@ export default function MetronomePage() {
       <SettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
+        initialTab={settingsTab}
         tempo={tempo}
         setTempo={setTempo}
         beats={beats}
