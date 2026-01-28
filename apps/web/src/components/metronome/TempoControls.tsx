@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 interface TempoControlsProps {
   tempo: number;
@@ -62,11 +62,13 @@ export function TempoControls({
           onClick={() => setCountInEnabled(!countInEnabled)}
           className={`h-12 px-6 rounded-lg border flex items-center justify-center min-w-[100px] transition-all ${
             countInEnabled
-              ? "bg-green-600 border-green-600 text-white"
-              : "bg-[#1A1A1A] border-white/20 text-white/80 hover:bg-[#222]"
+              ? 'bg-green-600 border-green-600 text-white'
+              : 'bg-[#1A1A1A] border-white/20 text-white/80 hover:bg-[#222]'
           }`}
         >
-          <span className="text-[13px] font-semibold tracking-[0.5px]">COUNT-IN</span>
+          <span className="text-[13px] font-semibold tracking-[0.5px]">
+            COUNT-IN
+          </span>
         </button>
 
         {/* Main play/stop button */}
@@ -74,10 +76,10 @@ export function TempoControls({
           onClick={toggle}
           className={`w-20 h-20 rounded-full flex items-center justify-center transition-all active:scale-95 ${
             isPlaying
-              ? "bg-[#D4822E] shadow-[0_4px_16px_rgba(232,145,58,0.4)]"
-              : "bg-[#E8913A] shadow-[0_4px_12px_rgba(232,145,58,0.3)]"
+              ? 'bg-[#D4822E] shadow-[0_4px_16px_rgba(232,145,58,0.4)]'
+              : 'bg-[#E8913A] shadow-[0_4px_12px_rgba(232,145,58,0.3)]'
           }`}
-          aria-label={isPlaying ? "Stop" : "Play"}
+          aria-label={isPlaying ? 'Stop' : 'Play'}
         >
           {isPlaying ? (
             <div className="w-6 h-6 bg-white rounded" />
@@ -85,9 +87,9 @@ export function TempoControls({
             <div
               className="w-0 h-0 ml-1.5"
               style={{
-                borderLeft: "24px solid white",
-                borderTop: "15px solid transparent",
-                borderBottom: "15px solid transparent",
+                borderLeft: '24px solid white',
+                borderTop: '15px solid transparent',
+                borderBottom: '15px solid transparent',
               }}
             />
           )}
@@ -97,7 +99,9 @@ export function TempoControls({
           onClick={tapTempo}
           className="h-12 px-6 rounded-lg bg-[#1A1A1A] border border-white/20 flex items-center justify-center min-w-[100px] hover:bg-[#222] transition-colors"
         >
-          <span className="text-[13px] font-semibold tracking-[0.5px] text-white/80">TAP</span>
+          <span className="text-[13px] font-semibold tracking-[0.5px] text-white/80">
+            TAP
+          </span>
         </button>
       </div>
     </div>

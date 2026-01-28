@@ -14,11 +14,13 @@ You need to create the following PNG icons from `icon.svg`:
 ## Generating Icons
 
 ### Option 1: Using an online tool
+
 1. Go to https://realfavicongenerator.net/ or https://www.pwabuilder.com/imageGenerator
 2. Upload `icon.svg`
 3. Download the generated icons
 
 ### Option 2: Using ImageMagick (command line)
+
 ```bash
 # Install ImageMagick if needed
 brew install imagemagick
@@ -33,6 +35,7 @@ convert icon.svg -resize 410x410 -gravity center -background "#E8913A" -extent 5
 ```
 
 ### Option 3: Using sharp (Node.js)
+
 ```javascript
 const sharp = require('sharp');
 

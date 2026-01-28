@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * CloudShowsPanel - Cloud sync section for settings
@@ -7,13 +7,13 @@
  * Also allows uploading new sheet music PDFs directly.
  */
 
-import { useState, useCallback, useEffect } from "react";
-import Link from "next/link";
-import { useMutation, useAction } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
-import type { CloudSyncHook } from "@/hooks/useCloudSync";
-import type { ShowHook } from "@/hooks/useShow";
+import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
+import { useMutation, useAction } from 'convex/react';
+import { api } from '../../../../../convex/_generated/api';
+import type { Id } from '../../../../../convex/_generated/dataModel';
+import type { CloudSyncHook } from '@/hooks/useCloudSync';
+import type { ShowHook } from '@/hooks/useShow';
 
 interface CloudShowsPanelProps {
   cloudSync: CloudSyncHook;
@@ -34,14 +34,19 @@ export function CloudShowsPanel({
     showName: string;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadingFilename, setUploadingFilename] = useState<string | null>(null);
+  const [uploadingFilename, setUploadingFilename] = useState<string | null>(
+    null
+  );
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Clear uploadingFilename when the show appears in the list
   useEffect(() => {
-    if (uploadingFilename && cloudSync.readyShows.some(
-      (show) => show.source_filename === uploadingFilename
-    )) {
+    if (
+      uploadingFilename &&
+      cloudSync.readyShows.some(
+        (show) => show.source_filename === uploadingFilename
+      )
+    ) {
       setUploadingFilename(null);
     }
   }, [cloudSync.readyShows, uploadingFilename]);
@@ -91,8 +96,8 @@ export function CloudShowsPanel({
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
+      month: 'short',
+      day: 'numeric',
     });
   };
 
@@ -105,9 +110,9 @@ export function CloudShowsPanel({
     setConfirmDelete(null);
 
     try {
-      await deleteShowMutation({ showId: showId as Id<"shows"> });
+      await deleteShowMutation({ showId: showId as Id<'shows'> });
     } catch (error) {
-      console.error("Failed to delete show:", error);
+      console.error('Failed to delete show:', error);
     } finally {
       setDeletingShow(null);
     }
@@ -116,9 +121,9 @@ export function CloudShowsPanel({
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
+    if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
-    } else if (e.type === "dragleave") {
+    } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
   }, []);
@@ -142,13 +147,13 @@ export function CloudShowsPanel({
   const handleFile = async (file: File) => {
     setUploadError(null);
 
-    if (file.type !== "application/pdf") {
-      setUploadError("Please upload a PDF file");
+    if (file.type !== 'application/pdf') {
+      setUploadError('Please upload a PDF file');
       return;
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      setUploadError("File size must be under 50MB");
+      setUploadError('File size must be under 50MB');
       return;
     }
 
@@ -161,35 +166,33 @@ export function CloudShowsPanel({
 
       // Step 2: Upload file directly to Convex storage
       const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
         body: file,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload file");
+        throw new Error('Failed to upload file');
       }
 
       const { storageId } = await response.json();
 
       // Step 3: Create show record
       const showId = await createShowFromPdf({
-        name: file.name.replace(".pdf", ""),
+        name: file.name.replace('.pdf', ''),
         sourceFilename: file.name,
         pdfStorageId: storageId,
       });
 
       // Step 4: Trigger PDF processing action (runs async on server)
       processPdf({ showId }).catch((err) => {
-        console.error("PDF processing failed:", err);
+        console.error('PDF processing failed:', err);
       });
 
       // Refresh the shows list to include the new upload
       await cloudSync.fetchShows();
     } catch (error) {
-      setUploadError(
-        error instanceof Error ? error.message : "Upload failed"
-      );
+      setUploadError(error instanceof Error ? error.message : 'Upload failed');
       setUploadingFilename(null); // Only clear on error
     } finally {
       setUploading(false);
@@ -217,7 +220,9 @@ export function CloudShowsPanel({
               />
             </svg>
           </div>
-          <h3 className="text-white/80 font-medium mb-1">Sign in to save shows</h3>
+          <h3 className="text-white/80 font-medium mb-1">
+            Sign in to save shows
+          </h3>
           <p className="text-white/40 text-sm mb-6">
             Your uploaded sheet music will be saved to your account
           </p>
@@ -247,10 +252,10 @@ export function CloudShowsPanel({
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
           <p className="text-amber-400 text-sm font-medium">Guest mode</p>
           <p className="text-amber-400/70 text-xs mt-1">
-            Uploads won&apos;t be saved.{" "}
+            Uploads won&apos;t be saved.{' '}
             <Link href="/login" className="underline hover:text-amber-400">
               Sign in
-            </Link>{" "}
+            </Link>{' '}
             to save your shows.
           </p>
         </div>
@@ -269,7 +274,7 @@ export function CloudShowsPanel({
             disabled={cloudSync.loading}
             className="text-xs text-[#E8913A] hover:text-[#E8913A]/80 disabled:opacity-50 transition-colors"
           >
-            {cloudSync.loading ? "Syncing..." : "Refresh"}
+            {cloudSync.loading ? 'Syncing...' : 'Refresh'}
           </button>
         )}
       </div>
@@ -285,7 +290,8 @@ export function CloudShowsPanel({
       {confirmReplace && (
         <div className="bg-[#1A1A1A] border border-white/10 rounded-xl p-4 space-y-3">
           <p className="text-sm text-white/80">
-            Replace &quot;{showManager.show.name || "current show"}&quot; with &quot;
+            Replace &quot;{showManager.show.name || 'current show'}&quot; with
+            &quot;
             {confirmReplace.showName}&quot;?
           </p>
           <div className="flex gap-2">
@@ -332,9 +338,9 @@ export function CloudShowsPanel({
       <div
         className={`relative rounded-xl border-2 border-dashed transition-colors ${
           dragActive
-            ? "border-[#E8913A] bg-[#E8913A]/10"
-            : "border-white/20 hover:border-white/30"
-        } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+            ? 'border-[#E8913A] bg-[#E8913A]/10'
+            : 'border-white/20 hover:border-white/30'
+        } ${uploading ? 'pointer-events-none opacity-60' : ''}`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -376,7 +382,10 @@ export function CloudShowsPanel({
       )}
 
       {/* Shows List - only for authenticated users */}
-      {isAuthenticated && cloudSync.loading && cloudSync.readyShows.length === 0 && !uploading ? (
+      {isAuthenticated &&
+      cloudSync.loading &&
+      cloudSync.readyShows.length === 0 &&
+      !uploading ? (
         <div className="flex items-center justify-center py-8">
           <div className="w-6 h-6 border-2 border-[#E8913A] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -392,7 +401,7 @@ export function CloudShowsPanel({
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate text-white/70">
-                    {uploadingFilename.replace(".pdf", "")}
+                    {uploadingFilename.replace('.pdf', '')}
                   </p>
                   <p className="text-xs text-white/40 mt-0.5">
                     {uploadingFilename} • Processing...
@@ -412,11 +421,11 @@ export function CloudShowsPanel({
                 key={show.id}
                 className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
                   isCurrentShow
-                    ? "bg-[#E8913A]/10 border-[#E8913A]/30"
+                    ? 'bg-[#E8913A]/10 border-[#E8913A]/30'
                     : isDeleting
-                    ? "bg-red-500/5 border-red-500/20"
-                    : "bg-[#1A1A1A] border-white/5"
-                } ${isImporting || isDeleting ? "opacity-60" : ""}`}
+                      ? 'bg-red-500/5 border-red-500/20'
+                      : 'bg-[#1A1A1A] border-white/5'
+                } ${isImporting || isDeleting ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <button
@@ -426,13 +435,13 @@ export function CloudShowsPanel({
                   >
                     <p
                       className={`text-sm font-medium truncate ${
-                        isCurrentShow ? "text-[#E8913A]" : "text-white/90"
+                        isCurrentShow ? 'text-[#E8913A]' : 'text-white/90'
                       }`}
                     >
                       {show.name}
                     </p>
                     <p className="text-xs text-white/40 mt-0.5">
-                      {show.source_filename || "Manual"} •{" "}
+                      {show.source_filename || 'Manual'} •{' '}
                       {formatDate(show.created_at)}
                     </p>
                   </button>
@@ -450,14 +459,27 @@ export function CloudShowsPanel({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setConfirmDelete({ showId: show.id, showName: show.name });
+                          setConfirmDelete({
+                            showId: show.id,
+                            showName: show.name,
+                          });
                         }}
                         disabled={isImporting}
                         className="p-1.5 text-white/30 hover:text-red-400 transition-colors disabled:opacity-50"
                         aria-label="Delete show"
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       </button>
                     )}

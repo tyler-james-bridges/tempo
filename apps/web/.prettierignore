@@ -1,0 +1,20 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Cache
+.turbo
+.vercel
+
+# Generated
+*.min.js
+pnpm-lock.yaml
+package-lock.json
+
+# Convex generated
+convex/_generated

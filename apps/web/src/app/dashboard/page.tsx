@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useUser, useClerk } from "@clerk/nextjs";
-import { useQuery, useMutation, useAction } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import { getStatusBadgeClass } from "@/lib/utils";
+import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useUser, useClerk } from '@clerk/nextjs';
+import { useQuery, useMutation, useAction } from 'convex/react';
+import { api } from '../../../../../convex/_generated/api';
+import { getStatusBadgeClass } from '@/lib/utils';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -25,9 +25,9 @@ export default function DashboardPage() {
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
+    if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
-    } else if (e.type === "dragleave") {
+    } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
   }, []);
@@ -49,13 +49,13 @@ export default function DashboardPage() {
   };
 
   const handleFile = async (file: File) => {
-    if (file.type !== "application/pdf") {
-      alert("Please upload a PDF file");
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a PDF file');
       return;
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      alert("File size must be under 50MB");
+      alert('File size must be under 50MB');
       return;
     }
 
@@ -67,34 +67,34 @@ export default function DashboardPage() {
 
       // Step 2: Upload file directly to Convex storage
       const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
         body: file,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload file");
+        throw new Error('Failed to upload file');
       }
 
       const { storageId } = await response.json();
 
       // Step 3: Create show record
       const showId = await createShowFromPdf({
-        name: file.name.replace(".pdf", ""),
+        name: file.name.replace('.pdf', ''),
         sourceFilename: file.name,
         pdfStorageId: storageId,
       });
 
       // Step 4: Trigger PDF processing action (runs async on server)
       processPdf({ showId }).catch((err) => {
-        console.error("PDF processing failed:", err);
+        console.error('PDF processing failed:', err);
       });
 
       // Shows list will auto-update via Convex reactivity
     } catch (error) {
       alert(
-        "Failed to upload: " +
-          (error instanceof Error ? error.message : "Unknown error")
+        'Failed to upload: ' +
+          (error instanceof Error ? error.message : 'Unknown error')
       );
     } finally {
       setUploading(false);
@@ -103,7 +103,7 @@ export default function DashboardPage() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push("/");
+    router.push('/');
   };
 
   if (!isLoaded || shows === undefined) {
@@ -121,18 +121,21 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#E8913A] flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+              <svg
+                className="w-5 h-5 text-white"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
               </svg>
             </div>
-            <span className="text-xl font-bold tracking-tight text-[#1A1A1A]">TempoMap</span>
+            <span className="text-xl font-bold tracking-tight text-[#1A1A1A]">
+              TempoMap
+            </span>
           </Link>
 
           <div className="flex items-center gap-4">
-            <Link
-              href="/metronome"
-              className="btn-primary text-sm"
-            >
+            <Link href="/metronome" className="btn-primary text-sm">
               Open Metronome
             </Link>
             <span className="text-[#5C5C5C] text-sm hidden sm:block">
@@ -159,13 +162,15 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-[#1A1A1A]">Your Shows</h1>
-            <p className="text-[#5C5C5C] text-sm mt-1">{shows.length} show{shows.length !== 1 ? 's' : ''}</p>
+            <p className="text-[#5C5C5C] text-sm mt-1">
+              {shows.length} show{shows.length !== 1 ? 's' : ''}
+            </p>
           </div>
         </div>
 
         {/* Upload Zone */}
         <div
-          className={`upload-zone p-10 mb-8 text-center ${dragActive ? "active" : ""}`}
+          className={`upload-zone p-10 mb-8 text-center ${dragActive ? 'active' : ''}`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
@@ -179,8 +184,18 @@ export default function DashboardPage() {
           ) : (
             <>
               <div className="w-14 h-14 rounded-2xl bg-[#E8913A]/10 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-7 h-7 text-[#E8913A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                <svg
+                  className="w-7 h-7 text-[#E8913A]"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
                 </svg>
               </div>
               <p className="text-base font-medium mb-1 text-[#1A1A1A]">
@@ -221,14 +236,24 @@ export default function DashboardPage() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-[#F5F4F2] flex items-center justify-center">
-                    <svg className="w-5 h-5 text-[#5C5C5C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    <svg
+                      className="w-5 h-5 text-[#5C5C5C]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                      />
                     </svg>
                   </div>
                   <div>
                     <h3 className="font-medium text-[#1A1A1A]">{show.name}</h3>
                     <p className="text-[#8C8C8C] text-sm">
-                      {show.sourceFilename ?? "Manual entry"}
+                      {show.sourceFilename ?? 'Manual entry'}
                     </p>
                   </div>
                 </div>
@@ -239,8 +264,18 @@ export default function DashboardPage() {
                   <span className="text-[#8C8C8C] text-sm">
                     {new Date(show.createdAt).toLocaleDateString()}
                   </span>
-                  <svg className="w-4 h-4 text-[#8C8C8C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  <svg
+                    className="w-4 h-4 text-[#8C8C8C]"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
                   </svg>
                 </div>
               </div>

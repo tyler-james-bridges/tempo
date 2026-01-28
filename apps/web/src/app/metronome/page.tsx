@@ -1,29 +1,33 @@
-"use client";
+'use client';
 
-import { useEffect, useCallback, useState } from "react";
-import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
-import { useMetronome } from "@/hooks/useMetronome";
-import { useShow, type Part } from "@/hooks/useShow";
-import { useCloudSync } from "@/hooks/useCloudSync";
-import { BeatRing } from "@/components/metronome/BeatRing";
-import { TempoControls } from "@/components/metronome/TempoControls";
-import { SettingsPanel } from "@/components/metronome/SettingsPanel";
-import { ScoreBar } from "@/components/metronome/ScoreBar";
+import { useEffect, useCallback, useState } from 'react';
+import Link from 'next/link';
+import { useUser } from '@clerk/nextjs';
+import { useMetronome } from '@/hooks/useMetronome';
+import { useShow, type Part } from '@/hooks/useShow';
+import { useCloudSync } from '@/hooks/useCloudSync';
+import { BeatRing } from '@/components/metronome/BeatRing';
+import { TempoControls } from '@/components/metronome/TempoControls';
+import { SettingsPanel } from '@/components/metronome/SettingsPanel';
+import { ScoreBar } from '@/components/metronome/ScoreBar';
 
 const SUBDIVISIONS = [
-  { value: 1, name: "Quarter" },
-  { value: 2, name: "Eighth" },
-  { value: 3, name: "Triplet" },
-  { value: 4, name: "16th" },
+  { value: 1, name: 'Quarter' },
+  { value: 2, name: 'Eighth' },
+  { value: 3, name: 'Triplet' },
+  { value: 4, name: '16th' },
 ] as const;
 
 export default function MetronomePage() {
   const { user, isLoaded } = useUser();
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"Shows" | "Tempo" | "Sound" | "Rhythm">("Shows");
+  const [settingsTab, setSettingsTab] = useState<
+    'Shows' | 'Tempo' | 'Sound' | 'Rhythm'
+  >('Shows');
 
-  const openSettings = (tab: "Shows" | "Tempo" | "Sound" | "Rhythm" = "Shows") => {
+  const openSettings = (
+    tab: 'Shows' | 'Tempo' | 'Sound' | 'Rhythm' = 'Shows'
+  ) => {
     setSettingsTab(tab);
     setShowSettings(true);
   };
@@ -59,40 +63,43 @@ export default function MetronomePage() {
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
 
       switch (e.code) {
-        case "Space":
+        case 'Space':
           e.preventDefault();
           toggle();
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
           setTempo(tempo + 1);
           break;
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
           setTempo(tempo - 1);
           break;
-        case "ArrowLeft":
+        case 'ArrowLeft':
           e.preventDefault();
           setTempo(tempo - 10);
           break;
-        case "ArrowRight":
+        case 'ArrowRight':
           e.preventDefault();
           setTempo(tempo + 10);
           break;
-        case "KeyT":
+        case 'KeyT':
           e.preventDefault();
           tapTempo();
           break;
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggle, setTempo, tempo, tapTempo]);
 
   // Handle selecting a part from ScoreBar
@@ -106,7 +113,8 @@ export default function MetronomePage() {
   );
 
   const cycleSubdivision = useCallback(() => {
-    const nextSub = subdivision === 4 ? 1 : ((subdivision + 1) as 1 | 2 | 3 | 4);
+    const nextSub =
+      subdivision === 4 ? 1 : ((subdivision + 1) as 1 | 2 | 3 | 4);
     setSubdivision(nextSub);
   }, [subdivision, setSubdivision]);
 
@@ -115,7 +123,8 @@ export default function MetronomePage() {
     setBeats(nextBeats);
   }, [beats, setBeats]);
 
-  const currentSubInfo = SUBDIVISIONS.find((s) => s.value === subdivision) || SUBDIVISIONS[0];
+  const currentSubInfo =
+    SUBDIVISIONS.find((s) => s.value === subdivision) || SUBDIVISIONS[0];
   const displayTempo = isCountingIn ? Math.abs(currentBeat) : tempo;
 
   if (loading) {
@@ -131,30 +140,45 @@ export default function MetronomePage() {
       {/* Glow overlay on downbeat */}
       <div
         className={`fixed inset-0 bg-[#E8913A] pointer-events-none transition-opacity duration-100 ${
-          isPlaying && currentBeat === 1 ? "opacity-[0.08]" : "opacity-0"
+          isPlaying && currentBeat === 1 ? 'opacity-[0.08]' : 'opacity-0'
         }`}
       />
 
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
             <div className="w-8 h-8 rounded-lg bg-[#E8913A] flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <svg
+                className="w-4 h-4 text-white"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
               </svg>
             </div>
             <span className="text-lg font-bold tracking-tight">TempoMap</span>
           </Link>
-          <div className={`w-2 h-2 rounded-full transition-colors ${isPlaying ? "bg-[#E8913A] shadow-[0_0_8px_#E8913A]" : "bg-white/30"}`} />
+          <div
+            className={`w-2 h-2 rounded-full transition-colors ${isPlaying ? 'bg-[#E8913A] shadow-[0_0_8px_#E8913A]' : 'bg-white/30'}`}
+          />
         </div>
 
         <button
-          onClick={() => openSettings("Shows")}
+          onClick={() => openSettings('Shows')}
           className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Open settings"
         >
-          <svg className="w-5 h-5 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            className="w-5 h-5 text-white/60"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
           </svg>
         </button>
@@ -167,7 +191,7 @@ export default function MetronomePage() {
           parts={showManager.show.parts}
           activePartId={showManager.show.activePartId}
           onSelectPart={handleSelectPart}
-          onOpenSettings={() => openSettings("Shows")}
+          onOpenSettings={() => openSettings('Shows')}
           onClearShow={showManager.clearShow}
         />
       )}
@@ -186,13 +210,17 @@ export default function MetronomePage() {
           <div className="flex flex-col items-center">
             <span
               className={`text-[96px] font-extralight tracking-[-4px] tabular-nums transition-colors ${
-                isPlaying ? (isCountingIn ? "text-green-500" : "text-[#E8913A]") : "text-white"
+                isPlaying
+                  ? isCountingIn
+                    ? 'text-green-500'
+                    : 'text-[#E8913A]'
+                  : 'text-white'
               }`}
             >
               {displayTempo}
             </span>
             <span className="text-xs font-semibold tracking-[2px] text-white/40 -mt-2">
-              {isCountingIn ? "COUNT IN" : "BPM"}
+              {isCountingIn ? 'COUNT IN' : 'BPM'}
             </span>
           </div>
         </BeatRing>
@@ -203,24 +231,36 @@ export default function MetronomePage() {
             onClick={cycleTimeSignature}
             className="px-6 py-3 bg-[#1A1A1A] border border-white/10 rounded-xl flex flex-col items-center min-w-[85px] hover:bg-[#222] transition-colors"
           >
-            <span className="text-base font-semibold text-white/80">{beats}/4</span>
-            <span className="text-[10px] font-semibold tracking-[1px] text-white/40 mt-1">TIME</span>
+            <span className="text-base font-semibold text-white/80">
+              {beats}/4
+            </span>
+            <span className="text-[10px] font-semibold tracking-[1px] text-white/40 mt-1">
+              TIME
+            </span>
           </button>
 
           <button
             onClick={cycleSubdivision}
             className="px-6 py-3 bg-[#E8913A]/10 border border-[#E8913A]/30 rounded-xl flex flex-col items-center min-w-[85px] hover:bg-[#E8913A]/20 transition-colors"
           >
-            <span className="text-base font-semibold text-[#E8913A]">{currentSubInfo.name}</span>
-            <span className="text-[10px] font-semibold tracking-[1px] text-[#E8913A]/60 mt-1">DIVISION</span>
+            <span className="text-base font-semibold text-[#E8913A]">
+              {currentSubInfo.name}
+            </span>
+            <span className="text-[10px] font-semibold tracking-[1px] text-[#E8913A]/60 mt-1">
+              DIVISION
+            </span>
           </button>
 
           <button
-            onClick={() => openSettings("Sound")}
+            onClick={() => openSettings('Sound')}
             className="px-6 py-3 bg-[#1A1A1A] border border-white/10 rounded-xl flex flex-col items-center min-w-[85px] hover:bg-[#222] transition-colors"
           >
-            <span className="text-base font-semibold text-white/80">{soundType.toUpperCase()}</span>
-            <span className="text-[10px] font-semibold tracking-[1px] text-white/40 mt-1">SOUND</span>
+            <span className="text-base font-semibold text-white/80">
+              {soundType.toUpperCase()}
+            </span>
+            <span className="text-[10px] font-semibold tracking-[1px] text-white/40 mt-1">
+              SOUND
+            </span>
           </button>
         </div>
 

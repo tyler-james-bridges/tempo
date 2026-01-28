@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * High-precision metronome using Web Audio API
@@ -10,11 +10,11 @@
  * - Audio thread handles precise timing, immune to JS thread jitter
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect } from 'react';
 
-const STORAGE_KEY = "metronome_settings_v6";
+const STORAGE_KEY = 'metronome_settings_v6';
 
-export type SoundType = "click" | "beep" | "wood" | "cowbell";
+export type SoundType = 'click' | 'beep' | 'wood' | 'cowbell';
 export type SubdivisionType = 1 | 2 | 3 | 4;
 export type AccentPattern = 0 | 1 | 2 | 3 | 4;
 
@@ -87,7 +87,7 @@ export function useMetronome() {
   const [beats, setBeatsState] = useState(4);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
-  const [soundType, setSoundTypeState] = useState<SoundType>("click");
+  const [soundType, setSoundTypeState] = useState<SoundType>('click');
   const [subdivision, setSubdivisionState] = useState<SubdivisionType>(1);
   const [volume, setVolumeState] = useState(0.8);
   const [accentPattern, setAccentPatternState] = useState<AccentPattern>(0);
@@ -150,8 +150,10 @@ export function useMetronome() {
         if (d.soundType) setSoundTypeState(d.soundType);
         if (d.subdivision) setSubdivisionState(d.subdivision);
         if (d.volume !== undefined) setVolumeState(d.volume);
-        if (d.accentPattern !== undefined) setAccentPatternState(d.accentPattern);
-        if (d.countInEnabled !== undefined) setCountInEnabledState(d.countInEnabled);
+        if (d.accentPattern !== undefined)
+          setAccentPatternState(d.accentPattern);
+        if (d.countInEnabled !== undefined)
+          setCountInEnabledState(d.countInEnabled);
         if (d.countInBeats !== undefined) setCountInBeatsState(d.countInBeats);
         if (d.muteAudio !== undefined) setMuteAudioState(d.muteAudio);
         if (d.audioLatency !== undefined) setAudioLatencyState(d.audioLatency);
@@ -182,18 +184,32 @@ export function useMetronome() {
     } catch {
       // Ignore storage errors
     }
-  }, [tempo, beats, soundType, subdivision, volume, accentPattern, countInEnabled, countInBeats, muteAudio, audioLatency]);
+  }, [
+    tempo,
+    beats,
+    soundType,
+    subdivision,
+    volume,
+    accentPattern,
+    countInEnabled,
+    countInBeats,
+    muteAudio,
+    audioLatency,
+  ]);
 
   // Initialize audio context lazily (requires user interaction)
   const initAudioContext = useCallback(() => {
     if (audioContextRef.current) return audioContextRef.current;
 
     try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
       audioContextRef.current = new AudioContextClass();
       return audioContextRef.current;
     } catch {
-      console.warn("AudioContext not available");
+      console.warn('AudioContext not available');
       return null;
     }
   }, []);
@@ -229,15 +245,12 @@ export function useMetronome() {
     }
   }, [soundType, volume, regenerateBuffers]);
 
-  const isAccented = useCallback(
-    (beat: number) => {
-      const pattern = accentPatternRef.current;
-      if (pattern === 0) return beat === 1;
-      if (pattern === 1) return true;
-      return (beat - 1) % pattern === 0;
-    },
-    []
-  );
+  const isAccented = useCallback((beat: number) => {
+    const pattern = accentPatternRef.current;
+    if (pattern === 0) return beat === 1;
+    if (pattern === 1) return true;
+    return (beat - 1) % pattern === 0;
+  }, []);
 
   const scheduleNote = useCallback(
     (time: number, beat: number, sub: number, isCountIn: boolean) => {
@@ -268,7 +281,10 @@ export function useMetronome() {
       if (!buffers.accent || !buffers.normal || !buffers.subdivision) return;
 
       const targetAudioTime = time - latencyCompensation;
-      const audioTime = targetAudioTime < ctx.currentTime ? ctx.currentTime + 0.005 : targetAudioTime;
+      const audioTime =
+        targetAudioTime < ctx.currentTime
+          ? ctx.currentTime + 0.005
+          : targetAudioTime;
 
       let buffer: AudioBuffer;
       if (accented) {
@@ -328,9 +344,19 @@ export function useMetronome() {
 
     while (nextNoteTimeRef.current < ctx.currentTime + totalLookAhead) {
       if (isCountingInRef.current) {
-        scheduleNote(nextNoteTimeRef.current, countInBeatRef.current + 1, 1, true);
+        scheduleNote(
+          nextNoteTimeRef.current,
+          countInBeatRef.current + 1,
+          1,
+          true
+        );
       } else {
-        scheduleNote(nextNoteTimeRef.current, currentBeatRef.current, currentSubRef.current, false);
+        scheduleNote(
+          nextNoteTimeRef.current,
+          currentBeatRef.current,
+          currentSubRef.current,
+          false
+        );
       }
       advanceNote();
     }
@@ -343,7 +369,7 @@ export function useMetronome() {
     if (!ctx) return;
 
     // Resume context if suspended
-    if (ctx.state === "suspended") {
+    if (ctx.state === 'suspended') {
       ctx.resume();
     }
 
@@ -451,7 +477,10 @@ export function useMetronome() {
   const tapTempo = useCallback(() => {
     const now = Date.now();
 
-    if (tapTimes.current.length && now - tapTimes.current[tapTimes.current.length - 1] > 2000) {
+    if (
+      tapTimes.current.length &&
+      now - tapTimes.current[tapTimes.current.length - 1] > 2000
+    ) {
       tapTimes.current = [];
     }
 

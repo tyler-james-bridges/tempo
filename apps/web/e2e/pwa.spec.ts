@@ -15,7 +15,9 @@ test.describe('PWA Configuration', () => {
     expect(manifest.icons).toBeDefined();
     expect(manifest.icons.length).toBeGreaterThan(0);
 
-    const iconSizes = manifest.icons.map((icon: { sizes: string }) => icon.sizes);
+    const iconSizes = manifest.icons.map(
+      (icon: { sizes: string }) => icon.sizes
+    );
     expect(iconSizes).toContain('192x192');
     expect(iconSizes).toContain('512x512');
 
@@ -31,11 +33,15 @@ test.describe('PWA Configuration', () => {
     await page.goto('/');
 
     // Check theme-color meta tag
-    const themeColor = await page.locator('meta[name="theme-color"]').getAttribute('content');
+    const themeColor = await page
+      .locator('meta[name="theme-color"]')
+      .getAttribute('content');
     expect(themeColor).toBeDefined();
 
     // Check viewport meta tag
-    const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
+    const viewport = await page
+      .locator('meta[name="viewport"]')
+      .getAttribute('content');
     expect(viewport).toContain('width=device-width');
 
     // Check apple-touch-icon

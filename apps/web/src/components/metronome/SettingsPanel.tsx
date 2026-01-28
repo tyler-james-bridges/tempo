@@ -1,15 +1,19 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import type { SoundType, SubdivisionType, AccentPattern } from "@/hooks/useMetronome";
-import type { CloudSyncHook } from "@/hooks/useCloudSync";
-import type { ShowHook } from "@/hooks/useShow";
-import { CloudShowsPanel } from "./CloudShowsPanel";
+import { useState, useEffect } from 'react';
+import type {
+  SoundType,
+  SubdivisionType,
+  AccentPattern,
+} from '@/hooks/useMetronome';
+import type { CloudSyncHook } from '@/hooks/useCloudSync';
+import type { ShowHook } from '@/hooks/useShow';
+import { CloudShowsPanel } from './CloudShowsPanel';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: "Shows" | "Tempo" | "Sound" | "Rhythm";
+  initialTab?: 'Shows' | 'Tempo' | 'Sound' | 'Rhythm';
   tempo: number;
   setTempo: (tempo: number) => void;
   beats: number;
@@ -29,33 +33,33 @@ interface SettingsPanelProps {
   isAuthenticated?: boolean;
 }
 
-const TABS = ["Shows", "Tempo", "Sound", "Rhythm"] as const;
+const TABS = ['Shows', 'Tempo', 'Sound', 'Rhythm'] as const;
 type Tab = (typeof TABS)[number];
 
 const TIME_SIGNATURES = [
-  { beats: 2, label: "2/4" },
-  { beats: 3, label: "3/4" },
-  { beats: 4, label: "4/4" },
-  { beats: 5, label: "5/4" },
-  { beats: 6, label: "6/4" },
-  { beats: 7, label: "7/4" },
+  { beats: 2, label: '2/4' },
+  { beats: 3, label: '3/4' },
+  { beats: 4, label: '4/4' },
+  { beats: 5, label: '5/4' },
+  { beats: 6, label: '6/4' },
+  { beats: 7, label: '7/4' },
 ];
 
 const SUBDIVISIONS = [
-  { value: 1 as SubdivisionType, name: "Quarter" },
-  { value: 2 as SubdivisionType, name: "Eighth" },
-  { value: 3 as SubdivisionType, name: "Triplet" },
-  { value: 4 as SubdivisionType, name: "16th" },
+  { value: 1 as SubdivisionType, name: 'Quarter' },
+  { value: 2 as SubdivisionType, name: 'Eighth' },
+  { value: 3 as SubdivisionType, name: 'Triplet' },
+  { value: 4 as SubdivisionType, name: '16th' },
 ];
 
-const SOUNDS: SoundType[] = ["click", "beep", "wood", "cowbell"];
+const SOUNDS: SoundType[] = ['click', 'beep', 'wood', 'cowbell'];
 
 const ACCENT_PATTERNS: { value: AccentPattern; label: string }[] = [
-  { value: 0, label: "First beat only" },
-  { value: 1, label: "All beats" },
-  { value: 2, label: "Every 2nd beat" },
-  { value: 3, label: "Every 3rd beat" },
-  { value: 4, label: "Every 4th beat" },
+  { value: 0, label: 'First beat only' },
+  { value: 1, label: 'All beats' },
+  { value: 2, label: 'Every 2nd beat' },
+  { value: 3, label: 'Every 3rd beat' },
+  { value: 4, label: 'Every 4th beat' },
 ];
 
 export function SettingsPanel({
@@ -80,7 +84,7 @@ export function SettingsPanel({
   showManager,
   isAuthenticated,
 }: SettingsPanelProps) {
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "Shows");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? 'Shows');
 
   // Update active tab when initialTab changes and panel opens
   useEffect(() => {
@@ -92,7 +96,10 @@ export function SettingsPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-md bg-[#1A1A1A] rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -105,8 +112,18 @@ export function SettingsPanel({
             className="p-2 text-white/60 hover:text-white transition-colors"
             aria-label="Close settings"
           >
-            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M15 5L5 15M5 5l10 10" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                d="M15 5L5 15M5 5l10 10"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>
@@ -119,8 +136,8 @@ export function SettingsPanel({
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === tab
-                  ? "text-[#E8913A] border-b-2 border-[#E8913A]"
-                  : "text-white/60 hover:text-white/80"
+                  ? 'text-[#E8913A] border-b-2 border-[#E8913A]'
+                  : 'text-white/60 hover:text-white/80'
               }`}
             >
               {tab}
@@ -130,7 +147,7 @@ export function SettingsPanel({
 
         {/* Content */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
-          {activeTab === "Shows" && cloudSync && showManager && (
+          {activeTab === 'Shows' && cloudSync && showManager && (
             <CloudShowsPanel
               cloudSync={cloudSync}
               showManager={showManager}
@@ -139,13 +156,13 @@ export function SettingsPanel({
             />
           )}
 
-          {activeTab === "Shows" && (!cloudSync || !showManager) && (
+          {activeTab === 'Shows' && (!cloudSync || !showManager) && (
             <div className="text-center py-8">
               <p className="text-white/50 text-sm">Cloud sync not available</p>
             </div>
           )}
 
-          {activeTab === "Tempo" && (
+          {activeTab === 'Tempo' && (
             <div className="space-y-6">
               {/* Tempo slider */}
               <div>
@@ -168,7 +185,9 @@ export function SettingsPanel({
 
               {/* Time signature */}
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-3">Time Signature</label>
+                <label className="block text-sm font-medium text-white/80 mb-3">
+                  Time Signature
+                </label>
                 <div className="grid grid-cols-6 gap-2">
                   {TIME_SIGNATURES.map((ts) => (
                     <button
@@ -176,8 +195,8 @@ export function SettingsPanel({
                       onClick={() => setBeats(ts.beats)}
                       className={`py-2 rounded-lg text-sm font-medium transition-colors ${
                         beats === ts.beats
-                          ? "bg-[#E8913A] text-white"
-                          : "bg-white/10 text-white/80 hover:bg-white/20"
+                          ? 'bg-[#E8913A] text-white'
+                          : 'bg-white/10 text-white/80 hover:bg-white/20'
                       }`}
                     >
                       {ts.label}
@@ -188,16 +207,18 @@ export function SettingsPanel({
 
               {/* Count-in */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white/80">Count-in</span>
+                <span className="text-sm font-medium text-white/80">
+                  Count-in
+                </span>
                 <button
                   onClick={() => setCountInEnabled(!countInEnabled)}
                   className={`w-12 h-6 rounded-full transition-colors ${
-                    countInEnabled ? "bg-[#E8913A]" : "bg-white/20"
+                    countInEnabled ? 'bg-[#E8913A]' : 'bg-white/20'
                   }`}
                 >
                   <div
                     className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                      countInEnabled ? "translate-x-6" : "translate-x-0.5"
+                      countInEnabled ? 'translate-x-6' : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -205,11 +226,13 @@ export function SettingsPanel({
             </div>
           )}
 
-          {activeTab === "Sound" && (
+          {activeTab === 'Sound' && (
             <div className="space-y-6">
               {/* Sound type */}
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-3">Click Sound</label>
+                <label className="block text-sm font-medium text-white/80 mb-3">
+                  Click Sound
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   {SOUNDS.map((sound) => (
                     <button
@@ -217,8 +240,8 @@ export function SettingsPanel({
                       onClick={() => setSoundType(sound)}
                       className={`py-3 rounded-lg text-sm font-medium capitalize transition-colors ${
                         soundType === sound
-                          ? "bg-[#E8913A] text-white"
-                          : "bg-white/10 text-white/80 hover:bg-white/20"
+                          ? 'bg-[#E8913A] text-white'
+                          : 'bg-white/10 text-white/80 hover:bg-white/20'
                       }`}
                     >
                       {sound}
@@ -244,11 +267,13 @@ export function SettingsPanel({
             </div>
           )}
 
-          {activeTab === "Rhythm" && (
+          {activeTab === 'Rhythm' && (
             <div className="space-y-6">
               {/* Subdivision */}
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-3">Subdivision</label>
+                <label className="block text-sm font-medium text-white/80 mb-3">
+                  Subdivision
+                </label>
                 <div className="grid grid-cols-4 gap-2">
                   {SUBDIVISIONS.map((sub) => (
                     <button
@@ -256,8 +281,8 @@ export function SettingsPanel({
                       onClick={() => setSubdivision(sub.value)}
                       className={`py-3 rounded-lg text-sm font-medium transition-colors ${
                         subdivision === sub.value
-                          ? "bg-[#E8913A] text-white"
-                          : "bg-white/10 text-white/80 hover:bg-white/20"
+                          ? 'bg-[#E8913A] text-white'
+                          : 'bg-white/10 text-white/80 hover:bg-white/20'
                       }`}
                     >
                       {sub.name}
@@ -268,7 +293,9 @@ export function SettingsPanel({
 
               {/* Accent pattern */}
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-3">Accent Pattern</label>
+                <label className="block text-sm font-medium text-white/80 mb-3">
+                  Accent Pattern
+                </label>
                 <div className="space-y-2">
                   {ACCENT_PATTERNS.map((pattern) => (
                     <button
@@ -276,8 +303,8 @@ export function SettingsPanel({
                       onClick={() => setAccentPattern(pattern.value)}
                       className={`w-full py-3 px-4 rounded-lg text-sm font-medium text-left transition-colors ${
                         accentPattern === pattern.value
-                          ? "bg-[#E8913A] text-white"
-                          : "bg-white/10 text-white/80 hover:bg-white/20"
+                          ? 'bg-[#E8913A] text-white'
+                          : 'bg-white/10 text-white/80 hover:bg-white/20'
                       }`}
                     >
                       {pattern.label}

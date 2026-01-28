@@ -53,18 +53,17 @@ export default defineConfig({
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'] },
-      testMatch: [
-        '**/auth.spec.ts',
-        '**/pwa.spec.ts',
-      ],
+      testMatch: ['**/auth.spec.ts', '**/pwa.spec.ts'],
     },
   ],
 
   // Run local dev server before starting the tests (if not in CI with preview URL)
-  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev',
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
+      },
 });

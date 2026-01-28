@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{
-    outcome: "accepted" | "dismissed";
+    outcome: 'accepted' | 'dismissed';
     platform: string;
   }>;
   prompt(): Promise<void>;
@@ -17,44 +17,53 @@ declare global {
   }
 }
 
-const STORAGE_KEY = "pwa-install-prompt-dismissed";
+const STORAGE_KEY = 'pwa-install-prompt-dismissed';
 const DISMISS_DURATION_DAYS = 7;
 
 function isMobileDevice(): boolean {
   const userAgent = window.navigator.userAgent.toLowerCase();
-  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(userAgent) ||
-    (/macintosh/.test(userAgent) && navigator.maxTouchPoints > 1);
+  return (
+    /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(
+      userAgent
+    ) ||
+    (/macintosh/.test(userAgent) && navigator.maxTouchPoints > 1)
+  );
 }
 
 function isIOSDevice(): boolean {
   const userAgent = window.navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(userAgent);
-  const isMacWithTouch = /macintosh/.test(userAgent) && navigator.maxTouchPoints > 1;
+  const isMacWithTouch =
+    /macintosh/.test(userAgent) && navigator.maxTouchPoints > 1;
   return isIOS || isMacWithTouch;
 }
 
 function isStandaloneMode(): boolean {
   return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+      true
   );
 }
 
 function wasRecentlyDismissed(): boolean {
   const dismissedAt = localStorage.getItem(STORAGE_KEY);
   if (!dismissedAt) return false;
-  const daysSinceDismissal = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
+  const daysSinceDismissal =
+    (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
   return daysSinceDismissal < DISMISS_DURATION_DAYS;
 }
 
 export function InstallPrompt(): React.ReactNode {
   const [isIOS, setIsIOS] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    if (!isMobileDevice() || isStandaloneMode() || wasRecentlyDismissed()) return;
+    if (!isMobileDevice() || isStandaloneMode() || wasRecentlyDismissed())
+      return;
 
     const ios = isIOSDevice();
     setIsIOS(ios);
@@ -65,18 +74,24 @@ export function InstallPrompt(): React.ReactNode {
       setShowPrompt(true);
     }
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     if (ios) {
       const timer = setTimeout(() => setShowPrompt(true), 3000);
       return () => {
         clearTimeout(timer);
-        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+        window.removeEventListener(
+          'beforeinstallprompt',
+          handleBeforeInstallPrompt
+        );
       };
     }
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener(
+        'beforeinstallprompt',
+        handleBeforeInstallPrompt
+      );
     };
   }, []);
 
@@ -89,7 +104,7 @@ export function InstallPrompt(): React.ReactNode {
 
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
+    if (outcome === 'accepted') {
       setShowPrompt(false);
     }
     setDeferredPrompt(null);
@@ -125,7 +140,7 @@ export function InstallPrompt(): React.ReactNode {
                 onClick={handleInstallClick}
                 className="bg-[#E8913A] hover:bg-[#d4822e] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
               >
-                {isIOS ? "How to" : "Install"}
+                {isIOS ? 'How to' : 'Install'}
               </button>
               <button
                 onClick={handleDismiss}
@@ -173,7 +188,7 @@ export function InstallPrompt(): React.ReactNode {
                 </span>
                 <div>
                   <p>
-                    Tap the{" "}
+                    Tap the{' '}
                     <span className="inline-flex items-center">
                       <svg
                         width="16"
@@ -199,7 +214,7 @@ export function InstallPrompt(): React.ReactNode {
                         />
                       </svg>
                       <strong>Share</strong>
-                    </span>{" "}
+                    </span>{' '}
                     button in Safari
                   </p>
                 </div>
@@ -211,7 +226,7 @@ export function InstallPrompt(): React.ReactNode {
                 </span>
                 <div>
                   <p>
-                    Scroll down and tap{" "}
+                    Scroll down and tap{' '}
                     <strong>&quot;Add to Home Screen&quot;</strong>
                   </p>
                 </div>
