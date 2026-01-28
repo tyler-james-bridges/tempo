@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from 'react';
 
 interface BeatRingProps {
   beats: number;
@@ -77,8 +77,8 @@ export function BeatRing({
           className="absolute w-2.5 h-2.5 rounded-full bg-[#E8913A] shadow-[0_0_10px_#E8913A]"
           style={{
             top: -5,
-            left: "50%",
-            transform: "translateX(-50%)",
+            left: '50%',
+            transform: 'translateX(-50%)',
           }}
         />
       </div>
@@ -97,16 +97,16 @@ export function BeatRing({
             key={i}
             className={`absolute rounded-full transition-all duration-100 ${
               isActive
-                ? "bg-[#E8913A] shadow-[0_0_10px_#E8913A]"
+                ? 'bg-[#E8913A] shadow-[0_0_10px_#E8913A]'
                 : isAccentBeat
-                ? "bg-white"
-                : "bg-white/30"
+                  ? 'bg-white'
+                  : 'bg-white/30'
             }`}
             style={{
               width: isAccentBeat ? 14 : 10,
               height: isAccentBeat ? 14 : 10,
-              left: "50%",
-              top: "50%",
+              left: '50%',
+              top: '50%',
               transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${isPulsing ? 1.4 : 1})`,
             }}
           />
@@ -117,7 +117,7 @@ export function BeatRing({
       <button
         onClick={onTap}
         className="absolute inset-[30px] rounded-full flex items-center justify-center hover:bg-[#E8913A]/5 active:bg-[#E8913A]/10 transition-colors"
-        aria-label={isPlaying ? "Stop metronome" : "Start metronome"}
+        aria-label={isPlaying ? 'Stop metronome' : 'Start metronome'}
       >
         {children}
       </button>

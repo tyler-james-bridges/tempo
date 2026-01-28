@@ -1,20 +1,20 @@
-import sharp from "sharp";
-import path from "path";
-import { fileURLToPath } from "url";
+import sharp from 'sharp';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOURCE_ICON = path.join(
   __dirname,
-  "../../../ios/tempomonorepo/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png"
+  '../../../ios/tempomonorepo/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png'
 );
-const OUTPUT_DIR = path.join(__dirname, "../public/icons");
+const OUTPUT_DIR = path.join(__dirname, '../public/icons');
 
 const SIZES = [192, 512];
 
 async function generateIcons() {
-  console.log("Generating PWA icons from:", SOURCE_ICON);
-  console.log("Output directory:", OUTPUT_DIR);
+  console.log('Generating PWA icons from:', SOURCE_ICON);
+  console.log('Output directory:', OUTPUT_DIR);
 
   for (const size of SIZES) {
     // Standard icon
@@ -42,7 +42,7 @@ async function generateIcons() {
     console.log(`Generated icon-maskable-${size}x${size}.png`);
   }
 
-  console.log("Done!");
+  console.log('Done!');
 }
 
 generateIcons().catch(console.error);

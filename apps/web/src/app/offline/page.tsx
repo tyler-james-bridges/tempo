@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 export default function OfflinePage(): React.ReactNode {
   return (
@@ -22,14 +22,13 @@ export default function OfflinePage(): React.ReactNode {
           <line x1="12" y1="20" x2="12.01" y2="20" />
         </svg>
       </div>
-      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-2">You&apos;re offline</h1>
+      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-2">
+        You&apos;re offline
+      </h1>
       <p className="text-[#5C5C5C] text-center max-w-sm mb-6">
         Check your internet connection and try again.
       </p>
-      <button
-        onClick={() => window.location.reload()}
-        className="btn-primary"
-      >
+      <button onClick={() => window.location.reload()} className="btn-primary">
         Try again
       </button>
     </div>

@@ -9,7 +9,10 @@ const testPassword = process.env.TEST_USER_PASSWORD;
 const hasCredentials = testEmail && testPassword;
 
 test.describe('Metronome', () => {
-  test.skip(!hasCredentials, 'Requires TEST_USER_EMAIL and TEST_USER_PASSWORD env vars');
+  test.skip(
+    !hasCredentials,
+    'Requires TEST_USER_EMAIL and TEST_USER_PASSWORD env vars'
+  );
 
   test('loads, plays, and responds to keyboard shortcuts', async ({ page }) => {
     // Login
@@ -24,7 +27,9 @@ test.describe('Metronome', () => {
     } catch {
       const bodyText = await page.textContent('body');
       const currentUrl = page.url();
-      throw new Error(`Login failed. URL: ${currentUrl}. Page content includes: ${bodyText?.slice(0, 500)}`);
+      throw new Error(
+        `Login failed. URL: ${currentUrl}. Page content includes: ${bodyText?.slice(0, 500)}`
+      );
     }
 
     // Navigate to metronome

@@ -3,13 +3,13 @@
  */
 export function getStatusBadgeClass(status: string): string {
   switch (status) {
-    case "ready":
-      return "badge badge-ready";
-    case "processing":
-      return "badge badge-processing";
-    case "error":
-      return "badge badge-error";
+    case 'ready':
+      return 'badge badge-ready';
+    case 'processing':
+      return 'badge badge-processing';
+    case 'error':
+      return 'badge badge-error';
     default:
-      return "badge badge-pending";
+      return 'badge badge-pending';
   }
 }

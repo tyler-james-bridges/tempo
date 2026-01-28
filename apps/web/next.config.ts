@@ -1,15 +1,15 @@
-import type { NextConfig } from "next";
-import withPWAInit from "@ducanh2912/next-pwa";
+import type { NextConfig } from 'next';
+import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
   register: true,
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   fallbacks: {
-    document: "/offline",
+    document: '/offline',
   },
   workboxOptions: {
     disableDevLogs: true,
@@ -18,9 +18,9 @@ const withPWA = withPWAInit({
     runtimeCaching: [
       {
         urlPattern: /^https:\/\/.*\.convex\.cloud\/.*$/i,
-        handler: "NetworkFirst",
+        handler: 'NetworkFirst',
         options: {
-          cacheName: "convex-api",
+          cacheName: 'convex-api',
           expiration: {
             maxEntries: 32,
             maxAgeSeconds: 60 * 60, // 1 hour
@@ -30,9 +30,9 @@ const withPWA = withPWAInit({
       },
       {
         urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
-        handler: "CacheFirst",
+        handler: 'CacheFirst',
         options: {
-          cacheName: "static-images",
+          cacheName: 'static-images',
           expiration: {
             maxEntries: 64,
             maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
@@ -41,9 +41,9 @@ const withPWA = withPWAInit({
       },
       {
         urlPattern: /\.(?:js|css)$/i,
-        handler: "StaleWhileRevalidate",
+        handler: 'StaleWhileRevalidate',
         options: {
-          cacheName: "static-resources",
+          cacheName: 'static-resources',
           expiration: {
             maxEntries: 32,
             maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -52,9 +52,9 @@ const withPWA = withPWAInit({
       },
       {
         urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/i,
-        handler: "CacheFirst",
+        handler: 'CacheFirst',
         options: {
-          cacheName: "fonts",
+          cacheName: 'fonts',
           expiration: {
             maxEntries: 16,
             maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
@@ -63,9 +63,9 @@ const withPWA = withPWAInit({
       },
       {
         urlPattern: /^https?.*/,
-        handler: "NetworkFirst",
+        handler: 'NetworkFirst',
         options: {
-          cacheName: "others",
+          cacheName: 'others',
           expiration: {
             maxEntries: 32,
             maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -78,38 +78,38 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@tempo/shared"],
+  transpilePackages: ['@tempo/shared'],
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: '/(.*)',
         headers: [
           {
-            key: "X-Frame-Options",
-            value: "DENY",
+            key: 'X-Frame-Options',
+            value: 'DENY',
           },
           {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
           },
           {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
           },
           {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
           },
           {
-            key: "X-DNS-Prefetch-Control",
-            value: "on",
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
           },
           {
-            key: "Strict-Transport-Security",
-            value: "max-age=31536000; includeSubDomains",
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
           },
           {
-            key: "Content-Security-Policy",
+            key: 'Content-Security-Policy',
             value:
               "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud; font-src 'self'; worker-src 'self' blob: https://unpkg.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
           },

@@ -3,34 +3,34 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #FAFAF9;
-  --bg-secondary: #F5F4F2;
-  --bg-elevated: #FFFFFF;
-  --bg-surface: #EEEEED;
+  --bg-primary: #fafaf9;
+  --bg-secondary: #f5f4f2;
+  --bg-elevated: #ffffff;
+  --bg-surface: #eeeeed;
 
   /* Primary Accent - Deep Marigold */
-  --accent-primary: #E8913A;
-  --accent-primary-hover: #D4822E;
-  --accent-primary-active: #C67520;
+  --accent-primary: #e8913a;
+  --accent-primary-hover: #d4822e;
+  --accent-primary-active: #c67520;
   --accent-primary-muted: rgba(232, 145, 58, 0.12);
 
   /* Text Colors */
-  --text-primary: #1A1A1A;
-  --text-secondary: #5C5C5C;
-  --text-muted: #8C8C8C;
-  --text-disabled: #ACACAC;
+  --text-primary: #1a1a1a;
+  --text-secondary: #5c5c5c;
+  --text-muted: #8c8c8c;
+  --text-disabled: #acacac;
 
   /* Borders */
-  --border-subtle: #E8E8E6;
-  --border-medium: #D4D4D2;
-  --border-strong: #BEBEBB;
+  --border-subtle: #e8e8e6;
+  --border-medium: #d4d4d2;
+  --border-strong: #bebebb;
 
   /* Status Colors */
-  --success: #16A34A;
+  --success: #16a34a;
   --success-muted: rgba(22, 163, 74, 0.1);
-  --warning: #CA8A04;
+  --warning: #ca8a04;
   --warning-muted: rgba(202, 138, 4, 0.1);
-  --error: #DC2626;
+  --error: #dc2626;
   --error-muted: rgba(220, 38, 38, 0.1);
 
   /* Shadows */
@@ -47,7 +47,13 @@
 body {
   color: var(--text-primary);
   background: var(--bg-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -182,8 +188,14 @@ body {
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -192,7 +204,7 @@ body {
 
 .tempo-display {
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
 }
 
 /* Upload Zone */
@@ -259,7 +271,8 @@ body {
   left: -25%;
   width: 25%;
   height: 100%;
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     transparent 0%,
     rgba(232, 145, 58, 0.4) 40%,
     rgba(232, 145, 58, 0.7) 50%,

@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
 /**
  * Show Manager for managing tempo parts/movements
  * Ported from React Native app - uses localStorage for persistence
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from 'react';
 
-const STORAGE_KEY = "tempo_show_v1";
+const STORAGE_KEY = 'tempo_show_v1';
 
 export interface Part {
   id: string;
@@ -24,7 +24,7 @@ export interface Show {
 }
 
 const DEFAULT_SHOW: Show = {
-  name: "",
+  name: '',
   parts: [],
   activePartId: null,
   cloudShowId: null,
@@ -45,7 +45,7 @@ export function useShow() {
         setShow(parsed);
       }
     } catch {
-      console.warn("Failed to parse show data");
+      console.warn('Failed to parse show data');
     }
     setIsLoaded(true);
   }, []);
@@ -56,7 +56,7 @@ export function useShow() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(show));
       } catch {
-        console.warn("Failed to save show data");
+        console.warn('Failed to save show data');
       }
     }
   }, [show, isLoaded]);
@@ -87,12 +87,15 @@ export function useShow() {
     [show.parts.length]
   );
 
-  const updatePart = useCallback((id: string, updates: Partial<Omit<Part, "id">>) => {
-    setShow((prev) => ({
-      ...prev,
-      parts: prev.parts.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-    }));
-  }, []);
+  const updatePart = useCallback(
+    (id: string, updates: Partial<Omit<Part, 'id'>>) => {
+      setShow((prev) => ({
+        ...prev,
+        parts: prev.parts.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+      }));
+    },
+    []
+  );
 
   const deletePart = useCallback((id: string) => {
     setShow((prev) => {
@@ -100,7 +103,10 @@ export function useShow() {
       return {
         ...prev,
         parts: newParts,
-        activePartId: prev.activePartId === id ? newParts[0]?.id || null : prev.activePartId,
+        activePartId:
+          prev.activePartId === id
+            ? newParts[0]?.id || null
+            : prev.activePartId,
       };
     });
   }, []);
@@ -121,7 +127,9 @@ export function useShow() {
   const nextPart = useCallback(() => {
     setShow((prev) => {
       if (!prev.activePartId || prev.parts.length === 0) return prev;
-      const currentIndex = prev.parts.findIndex((p) => p.id === prev.activePartId);
+      const currentIndex = prev.parts.findIndex(
+        (p) => p.id === prev.activePartId
+      );
       const nextIndex = (currentIndex + 1) % prev.parts.length;
       return { ...prev, activePartId: prev.parts[nextIndex].id };
     });
@@ -130,8 +138,11 @@ export function useShow() {
   const prevPart = useCallback(() => {
     setShow((prev) => {
       if (!prev.activePartId || prev.parts.length === 0) return prev;
-      const currentIndex = prev.parts.findIndex((p) => p.id === prev.activePartId);
-      const prevIndex = currentIndex === 0 ? prev.parts.length - 1 : currentIndex - 1;
+      const currentIndex = prev.parts.findIndex(
+        (p) => p.id === prev.activePartId
+      );
+      const prevIndex =
+        currentIndex === 0 ? prev.parts.length - 1 : currentIndex - 1;
       return { ...prev, activePartId: prev.parts[prevIndex].id };
     });
   }, []);

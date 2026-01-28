@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import { useQuery } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
+import { useState } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { useQuery } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
+import type { Id } from '../../../../convex/_generated/dataModel';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 // Use CDN worker to avoid bundle issues
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -21,7 +21,9 @@ export function PdfViewer({ showId }: PdfViewerProps) {
   const [scale, setScale] = useState(1.0);
 
   // Get PDF URL from Convex
-  const pdfUrl = useQuery(api.shows.getPdfUrl, { showId: showId as Id<"shows"> });
+  const pdfUrl = useQuery(api.shows.getPdfUrl, {
+    showId: showId as Id<'shows'>,
+  });
 
   if (pdfUrl === undefined) {
     return (
@@ -51,7 +53,7 @@ export function PdfViewer({ showId }: PdfViewerProps) {
           Previous
         </button>
         <span className="text-sm text-[#5C5C5C]">
-          Page {pageNumber} of {numPages || "..."}
+          Page {pageNumber} of {numPages || '...'}
         </span>
         <button
           onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}

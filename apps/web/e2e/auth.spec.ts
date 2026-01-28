@@ -1,16 +1,22 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication', () => {
-  test('login form validates and shows error for invalid credentials', async ({ page }) => {
+  test('login form validates and shows error for invalid credentials', async ({
+    page,
+  }) => {
     await page.goto('/login');
 
     // Form elements visible and functional
     await expect(page.getByLabel(/email/i)).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in|log in/i })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /sign in|log in/i })
+    ).toBeVisible();
 
     // Navigation to signup works
-    const signupLink = page.getByRole('link', { name: /sign up|create account|register/i });
+    const signupLink = page.getByRole('link', {
+      name: /sign up|create account|register/i,
+    });
     await expect(signupLink).toBeVisible();
 
     // Test invalid credentials show error
@@ -18,7 +24,9 @@ test.describe('Authentication', () => {
     await page.getByLabel(/password/i).fill('wrongpassword');
     await page.getByRole('button', { name: /sign in|log in/i }).click();
 
-    await expect(page.getByText(/invalid|error|incorrect/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/invalid|error|incorrect/i)).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('signup form validates password requirements', async ({ page }) => {
@@ -38,13 +46,17 @@ test.describe('Authentication', () => {
       await confirmField.fill('12345');
     }
 
-    await page.getByRole('button', { name: /sign up|create|register/i }).click();
+    await page
+      .getByRole('button', { name: /sign up|create|register/i })
+      .click();
     await page.waitForTimeout(1000);
 
     expect(page.url()).toContain('signup');
   });
 
-  test('protected routes redirect to login when unauthenticated', async ({ page }) => {
+  test('protected routes redirect to login when unauthenticated', async ({
+    page,
+  }) => {
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/login/);
   });

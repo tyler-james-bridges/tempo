@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "generate-icons": "node scripts/generate-icons.mjs",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
@@ -29,14 +31,16 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/node": "^22",
-    "svix": "^1.84.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.23",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
+    "eslint-config-prettier": "^10.1.8",
     "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
     "sharp": "^0.34.5",
+    "svix": "^1.84.1",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9"
   }

@@ -7,10 +7,14 @@ test.describe('Home Page', () => {
     // Check page title and hero
     await expect(page).toHaveTitle(/TempoMap/i);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await expect(page.getByRole('link', { name: /get started/i })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /get started/i })
+    ).toBeVisible();
 
     // Navigation and footer links work
-    const metronomeLink = page.getByRole('link', { name: /metronome/i }).first();
+    const metronomeLink = page
+      .getByRole('link', { name: /metronome/i })
+      .first();
     await expect(metronomeLink).toBeVisible();
     await expect(page.getByRole('link', { name: /privacy/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /terms/i })).toBeVisible();

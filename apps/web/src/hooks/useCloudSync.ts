@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Cloud Sync for Tempo Shows - Convex Version
@@ -7,30 +7,30 @@
  * Realtime updates are automatic with Convex.
  */
 
-import { useQuery, useMutation, useConvex } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
-import type { Show } from "./useShow";
+import { useQuery, useMutation, useConvex } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
+import type { Id } from '../../../../convex/_generated/dataModel';
+import type { Show } from './useShow';
 
 // Types from Convex
 type ConvexShow = {
-  _id: Id<"shows">;
+  _id: Id<'shows'>;
   _creationTime: number;
   userId: string;
   name: string;
-  sourceType: "pdf_upload" | "manual" | "import";
+  sourceType: 'pdf_upload' | 'manual' | 'import';
   sourceFilename?: string;
-  pdfStorageId?: Id<"_storage">;
-  status: "pending" | "processing" | "ready" | "error";
+  pdfStorageId?: Id<'_storage'>;
+  status: 'pending' | 'processing' | 'ready' | 'error';
   errorMessage?: string;
   createdAt: number;
   updatedAt: number;
 };
 
 type ConvexPart = {
-  _id: Id<"parts">;
+  _id: Id<'parts'>;
   _creationTime: number;
-  showId: Id<"shows">;
+  showId: Id<'shows'>;
   name: string;
   tempo: number;
   beats: number;
@@ -65,10 +65,7 @@ function toCloudShow(show: ConvexShow) {
 /**
  * Convert Convex show+parts to local Show format for import
  */
-function toLocalShow(
-  show: ConvexShow,
-  parts: ConvexPart[]
-): Show {
+function toLocalShow(show: ConvexShow, parts: ConvexPart[]): Show {
   return {
     name: show.name,
     parts: parts.map((p) => ({
@@ -103,7 +100,7 @@ export function useCloudSync() {
   const fetchShowWithParts = async (showId: string): Promise<Show | null> => {
     try {
       const result = await convex.query(api.shows.getShowWithParts, {
-        showId: showId as Id<"shows">,
+        showId: showId as Id<'shows'>,
       });
 
       if (!result) {
@@ -112,7 +109,7 @@ export function useCloudSync() {
 
       return toLocalShow(result.show, result.parts);
     } catch (err) {
-      console.error("Failed to fetch show with parts:", err);
+      console.error('Failed to fetch show with parts:', err);
       return null;
     }
   };
@@ -124,14 +121,14 @@ export function useCloudSync() {
   ): Promise<string | null> => {
     try {
       const partId = await createPartMutation({
-        showId: showId as Id<"shows">,
+        showId: showId as Id<'shows'>,
         name: part.name,
         tempo: part.tempo,
         beats: part.beats,
       });
       return partId;
     } catch (err) {
-      console.error("Failed to create cloud part:", err);
+      console.error('Failed to create cloud part:', err);
       return null;
     }
   };
@@ -143,12 +140,12 @@ export function useCloudSync() {
   ): Promise<boolean> => {
     try {
       await updatePartMutation({
-        partId: partId as Id<"parts">,
+        partId: partId as Id<'parts'>,
         ...updates,
       });
       return true;
     } catch (err) {
-      console.error("Failed to update cloud part:", err);
+      console.error('Failed to update cloud part:', err);
       return false;
     }
   };
@@ -157,11 +154,11 @@ export function useCloudSync() {
   const deleteCloudPart = async (partId: string): Promise<boolean> => {
     try {
       await deletePartMutation({
-        partId: partId as Id<"parts">,
+        partId: partId as Id<'parts'>,
       });
       return true;
     } catch (err) {
-      console.error("Failed to delete cloud part:", err);
+      console.error('Failed to delete cloud part:', err);
       return false;
     }
   };
@@ -173,12 +170,12 @@ export function useCloudSync() {
   ): Promise<boolean> => {
     try {
       await updateShowMutation({
-        showId: showId as Id<"shows">,
+        showId: showId as Id<'shows'>,
         name,
       });
       return true;
     } catch (err) {
-      console.error("Failed to update cloud show name:", err);
+      console.error('Failed to update cloud show name:', err);
       return false;
     }
   };
